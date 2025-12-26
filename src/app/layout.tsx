@@ -1,38 +1,26 @@
-import type { Metadata } from "next";
-import { Noto_Sans_Devanagari, Playfair_Display } from "next/font/google"; 
-import "./globals.css";
-import { LanguageProvider } from "../context/LanguageContext"; // Import Provider
+import type { Metadata } from 'next';
+import { Inter, Playfair_Display } from 'next/font/google';
+import './globals.css';
+import { LanguageProvider } from '../context/LanguageContext';
+import WhatsAppFloat from '../components/WhatsAppFloat';
 
-// Body text ke liye clean font
-const hindiFont = Noto_Sans_Devanagari({ 
-  subsets: ["devanagari"],
-  weight: ["400", "500", "700"],
-  variable: "--font-hindi",
-});
-
-// Headings ke liye Royal/Ayurvedic font
-const serifFont = Playfair_Display({
-  subsets: ["latin"],
-  weight: ["600", "700"],
-  variable: "--font-serif",
-});
+const inter = Inter({ subsets: ['latin'], variable: '--font-inter' });
+const playfair = Playfair_Display({ subsets: ['latin'], variable: '--font-serif' });
 
 export const metadata: Metadata = {
-  title: "Shreenix Ayurveda | Dad-Khaaj Khujli Ka Pakka Ilaaj",
-  description: "Premium Ayurvedic Solution for Fungal Infections.",
+  title: 'Shreenix Ayurveda - Skin Care Expert',
+  description: 'Best Ayurvedic treatment for fungal infections.'
 };
 
 export default function RootLayout({
-  children,
-}: Readonly<{
-  children: React.ReactNode;
-}>) {
+  children
+}: Readonly<{ children: React.ReactNode }>) {
   return (
-    <html lang="hi" className="scroll-smooth">
-      <body className={`${hindiFont.className} ${serifFont.variable} bg-[#FDFBF7] text-gray-800 antialiased`}>
-        {/* Puri app ko Language Provider se wrap kiya */}
+    <html lang="en">
+      <body className={`${inter.variable} ${playfair.variable} font-sans`}>
         <LanguageProvider>
           {children}
+          <WhatsAppFloat />
         </LanguageProvider>
       </body>
     </html>

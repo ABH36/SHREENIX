@@ -3,71 +3,67 @@
 import React from 'react';
 import { motion } from 'framer-motion';
 import { ShieldCheck, Clock, Leaf, AlertCircle } from 'lucide-react';
+import { useLanguage } from '../context/LanguageContext';
 
-const benefits = [
-  {
-    title: 'sirf 3 Din Mein Asar',
-    description: 'Hamara advanced formula infection ko pehle din se hi rokna shuru kar deta hai.',
-    icon: Clock,
-  },
-  {
-    title: '100% Ayurvedic Formula',
-    description: 'Neem, Tulsi aur Haldi ki shakti. Bina kisi harmful chemical ya steroid ke.',
-    icon: Leaf,
-  },
-  {
-    title: 'Koi Side Effect Nahi',
-    description: 'Har tarah ki skin ke liye safe. Ise lagane se koi jalan ya nishan nahi padta.',
-    icon: ShieldCheck,
-  },
-  {
-    title: 'Dobara Hone Se Roke',
-    description: 'Ye sirf upar se thik nahi karta, balki skin ki deep layer me jakar jad khatam karta hai.',
-    icon: AlertCircle,
-  },
-];
+const icons = [Clock, Leaf, ShieldCheck, AlertCircle];
 
 const Benefits = () => {
+  const { t } = useLanguage();
+
   return (
-    <section id="benefits" className="py-20 bg-white">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="text-center mb-16">
-          <motion.h2 
+    <section id="benefits" className="bg-white py-20">
+      <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+
+        <div className="mb-16 text-center">
+          <motion.h2
             initial={{ opacity: 0, y: 20 }}
             whileInView={{ opacity: 1, y: 0 }}
-            className="text-emerald-600 font-bold tracking-wide uppercase text-sm"
+            viewport={{ once: true }}
+            className="font-sans text-sm font-bold uppercase tracking-wide text-emerald-600"
           >
-            Kyun Chunein Shreenix?
+            {t.benefits.heading}
           </motion.h2>
-          <motion.p 
+
+          <motion.p
             initial={{ opacity: 0, y: 20 }}
             whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
             transition={{ delay: 0.1 }}
-            className="mt-2 text-3xl font-extrabold text-gray-900 sm:text-4xl"
+            className="mt-2 font-serif text-3xl font-bold text-gray-900 md:text-4xl"
           >
-            Sirf ek cream nahi, <br />
-            <span className="text-emerald-700">Pura Ayurvedic Upchaar Hai</span>
+            {t.benefits.subHeading}
           </motion.p>
         </div>
 
         <div className="grid grid-cols-1 gap-8 sm:grid-cols-2 lg:grid-cols-4">
-          {benefits.map((benefit, index) => (
-            <motion.div 
-              key={index}
-              initial={{ opacity: 0, y: 30 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              transition={{ delay: index * 0.1 }}
-              whileHover={{ y: -10 }} // Card hover hone par upar uthega
-              className="flex flex-col items-center text-center p-8 bg-stone-50 rounded-2xl shadow-sm hover:shadow-xl transition-all border border-emerald-50"
-            >
-              <div className="flex items-center justify-center h-16 w-16 rounded-full bg-emerald-100 text-emerald-700 mb-6 shadow-inner">
-                <benefit.icon className="h-8 w-8" aria-hidden="true" />
-              </div>
-              <h3 className="text-xl font-bold text-gray-900 mb-3">{benefit.title}</h3>
-              <p className="text-base text-gray-600 leading-relaxed">{benefit.description}</p>
-            </motion.div>
-          ))}
+          {t.benefits.items.map((benefit, index) => {
+            const Icon = icons[index];
+            return (
+              <motion.div
+                key={index}
+                initial={{ opacity: 0, y: 30 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true }}
+                transition={{ delay: index * 0.1 }}
+                whileHover={{ y: -10 }}
+                className="group flex flex-col items-center rounded-2xl border border-stone-100 bg-stone-50 p-8 text-center shadow-sm transition-all hover:shadow-xl"
+              >
+                <div className="mb-6 flex h-16 w-16 items-center justify-center rounded-full bg-emerald-100 text-emerald-700 transition-colors duration-300 group-hover:bg-emerald-700 group-hover:text-white">
+                  <Icon className="h-8 w-8" aria-hidden="true" />
+                </div>
+
+                <h3 className="mb-3 font-serif text-xl font-bold text-gray-900">
+                  {benefit.title}
+                </h3>
+
+                <p className="font-sans text-base leading-relaxed text-gray-600">
+                  {benefit.desc}
+                </p>
+              </motion.div>
+            );
+          })}
         </div>
+
       </div>
     </section>
   );

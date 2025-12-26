@@ -3,26 +3,25 @@
 import React, { createContext, useContext, useState } from 'react';
 import { content } from '../lib/content';
 
-// Type define kar rahe hain
 type Language = 'hi' | 'en';
-type ContentType = typeof content.hi;
+type Translation = typeof content.hi;
 
 interface LanguageContextType {
   lang: Language;
-  t: ContentType;
+  t: Translation;
   toggleLanguage: () => void;
 }
 
 const LanguageContext = createContext<LanguageContextType | undefined>(undefined);
 
 export function LanguageProvider({ children }: { children: React.ReactNode }) {
-  const [lang, setLang] = useState<Language>('hi'); // Default Hindi
+  const [lang, setLang] = useState<Language>('hi');
 
   const toggleLanguage = () => {
     setLang((prev) => (prev === 'hi' ? 'en' : 'hi'));
   };
 
-  const t = content[lang]; // Current content select karo
+  const t = content[lang];
 
   return (
     <LanguageContext.Provider value={{ lang, t, toggleLanguage }}>
@@ -33,7 +32,7 @@ export function LanguageProvider({ children }: { children: React.ReactNode }) {
 
 export function useLanguage() {
   const context = useContext(LanguageContext);
-  if (context === undefined) {
+  if (!context) {
     throw new Error('useLanguage must be used within a LanguageProvider');
   }
   return context;
