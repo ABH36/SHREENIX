@@ -10,46 +10,39 @@ const FAQ = () => {
   const [activeIndex, setActiveIndex] = useState<number | null>(0);
 
   return (
-    <section id="faq" className="bg-emerald-900 py-20 text-white">
-      <div className="mx-auto max-w-3xl px-4 sm:px-6 lg:px-8">
+    <section id="faq" className="bg-gradient-to-b from-[#102820] to-[#1C6B4A] py-28 text-white">
+      <div className="mx-auto max-w-3xl px-6">
 
-        <div className="mb-12 text-center">
-          <h2 className="font-serif text-3xl font-bold text-emerald-50">
+        <div className="mb-16 text-center">
+          <h2 className="font-serif text-3xl md:text-4xl text-white">
             {t.faq.heading}
           </h2>
         </div>
 
-        <div className="space-y-4">
+        <div className="space-y-5">
           {t.faq.items.map((item, index) => (
             <div
               key={index}
-              className="overflow-hidden rounded-xl border border-emerald-700 bg-emerald-800/50"
+              className="overflow-hidden rounded-2xl border border-white/20 bg-white/10 backdrop-blur-xl"
             >
               <button
-                onClick={() =>
-                  setActiveIndex(activeIndex === index ? null : index)
-                }
-                className="flex w-full items-center justify-between p-5 text-left focus:outline-none"
+                onClick={() => setActiveIndex(activeIndex === index ? null : index)}
+                className="flex w-full items-center justify-between p-6 text-left"
               >
-                <span className="pr-4 font-serif text-lg font-medium text-emerald-50">
+                <span className="pr-4 font-serif text-lg text-white">
                   {item.q}
                 </span>
                 {activeIndex === index ? (
-                  <Minus className="flex-shrink-0 text-emerald-300" />
+                  <Minus className="flex-shrink-0 text-[#D4AF37]" />
                 ) : (
-                  <Plus className="flex-shrink-0 text-emerald-300" />
+                  <Plus className="flex-shrink-0 text-[#D4AF37]" />
                 )}
               </button>
 
               <AnimatePresence>
                 {activeIndex === index && (
-                  <motion.div
-                    initial={{ height: 0, opacity: 0 }}
-                    animate={{ height: 'auto', opacity: 1 }}
-                    exit={{ height: 0, opacity: 0 }}
-                    transition={{ duration: 0.3 }}
-                  >
-                    <div className="mt-2 border-t border-emerald-700/50 p-5 pt-0 font-sans leading-relaxed text-emerald-100/80">
+                  <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} transition={{ duration: 0.35 }}>
+                    <div className="border-t border-white/20 p-6 pt-0 text-white/80 leading-relaxed">
                       {item.a}
                     </div>
                   </motion.div>

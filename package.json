@@ -2,6 +2,13 @@
   "name": "shreenix-web",
   "version": "0.1.0",
   "private": true,
+  "author": "AJ",
+  "license": "Shreenix Commercial Software License",
+  "homepage": "https://shreenix-ayurveda.com",
+  "repository": {
+    "type": "git",
+    "url": "private"
+  },
   "scripts": {
     "dev": "next dev",
     "build": "next build",

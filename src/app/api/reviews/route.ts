@@ -2,7 +2,6 @@ import { NextResponse } from 'next/server';
 import dbConnect from '../../../lib/db';
 import Review from '../../../models/Review';
 
-// GET: All Reviews (Newest First)
 export async function GET() {
   try {
     await dbConnect();
@@ -13,7 +12,6 @@ export async function GET() {
   }
 }
 
-// POST: Add New Review (Admin)
 export async function POST(req: Request) {
   try {
     await dbConnect();
@@ -25,7 +23,6 @@ export async function POST(req: Request) {
   }
 }
 
-// DELETE: Remove Review (Admin)
 export async function DELETE(req: Request) {
   try {
     await dbConnect();

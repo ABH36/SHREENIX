@@ -8,7 +8,7 @@ export async function GET() {
 
     const orders = await Order.find({})
       .sort({ createdAt: -1 })
-      .lean(); // ⚡ Faster + Low memory
+      .lean();
 
     return NextResponse.json({ success: true, orders });
   } catch (error) {

@@ -1,36 +1,133 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+🌿 Shreenix 
+D2C E-Commerce & Business Management Platform
 
-## Getting Started
+A full-stack, production-ready e-commerce platform built for Shreenix that combines a high-conversion customer website with a powerful admin control system for managing products, orders, customers and growth — built using Next.js 14, TypeScript & MongoDB.
 
-First, run the development server:
 
-```bash
+
+
+🚀 Core Features
+🛒 Customer Platform
+
+Dynamic Hero Slider – Fully controlled from Admin Panel
+
+Before/After Treatment Visuals
+
+Smart Order Form
+
+Pincode delivery whitelist
+
+Coupon based discounts
+
+Dynamic pricing by product size/weight
+
+WhatsApp Floating Support Button
+
+Announcement Bar for sales & offers
+
+Mobile-First Responsive UI
+
+Multi-Language Support (Hindi / English)
+
+⚡ Admin Panel (CMS)
+
+Live Dashboard Analytics – Revenue, Orders, Pending status
+
+Order Management
+
+Status update (Processing, Shipped, Delivered, Cancelled)
+
+CSV export for shipping partners
+
+WhatsApp customer contact
+
+Product Management
+
+Variant control (Weight, MRP, Selling Price)
+
+Hero & Treatment image management
+
+Delivery pincode whitelist
+
+Customer Database & Insights
+
+Review Manager
+
+Coupon Manager
+
+Global Website Settings
+
+Contact details
+
+Announcement bar control
+
+🛠️ Tech Stack
+Layer	Technology
+Frontend	Next.js 14 (App Router), TypeScript
+Styling	Tailwind CSS
+Backend	Next.js API Routes
+Database	MongoDB + Mongoose
+Animations	Framer Motion
+Icons	Lucide React
+⚙️ Setup & Installation
+1. Clone Repository
+git clone https://github.com/your-username/shreenix-web.git
+cd shreenix-web
+
+2. Install Dependencies
+npm install
+# or
+yarn install
+
+3. Environment Variables
+
+Create .env.local
+
+MONGODB_URI=mongodb+srv://<username>:<password>@cluster.mongodb.net/shreenix
+
+4. Start Development Server
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
-```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+Website → http://localhost:3000
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+Admin Panel → http://localhost:3000/admin/login
 
-## Learn More
+📂 Project Structure
+src/
+├── app/
+│   ├── admin/         # Admin Panel
+│   ├── api/           # Backend APIs
+│   ├── layout.tsx     # Root Layout
+│   └── page.tsx       # Landing Page
+├── components/        # Reusable Components
+├── lib/               # DB helpers
+├── models/            # Mongo Schemas
+└── public/            # Static Assets
 
-To learn more about Next.js, take a look at the following resources:
+🛡️ Admin Access
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+Visit /admin/login.
+Make sure admin authentication and seed user are configured in database.
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+📦 Deployment (Vercel)
 
-## Deploy on Vercel
+Push project to GitHub
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+Import into Vercel
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+Add MONGODB_URI in Environment Variables
+
+Click Deploy
+
+🤝 Contributing
+
+Fork the repo
+
+Create branch
+
+Commit changes
+
+Push & create PR
+
+Developed with ❤️ for Shreenix

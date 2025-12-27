@@ -2,52 +2,54 @@ import { NextResponse } from 'next/server';
 import dbConnect from '../../../../lib/db';
 import Coupon from '../../../../models/Coupon';
 
-// GET: All Coupons
 export async function GET() {
+  await dbConnect();
   try {
-    await dbConnect();
     const coupons = await Coupon.find().sort({ createdAt: -1 });
     return NextResponse.json({ success: true, coupons });
   } catch {
-    return NextResponse.json({ success: false, coupons: [] }, { status: 500 });
+    return NextResponse.json({ success: false, coupons: [] });
   }
 }
 
-// POST: Create Coupon
 export async function POST(req: Request) {
   try {
     await dbConnect();
-    const body = await req.json();
+    const { code, discountAmount } = await req.json();
+
+    if (!code || !discountAmount) {
+      return NextResponse.json({ success: false, error: 'All fields required' }, { status: 400 });
+    }
+
+    const existing = await Coupon.findOne({ code: code.toUpperCase() });
+    if (existing) {
+      return NextResponse.json({ success: false, error: 'Coupon code already exists' }, { status: 400 });
+    }
 
     const coupon = await Coupon.create({
-      code: body.code.toUpperCase(),
-      discountAmount: body.discountAmount,
-      isActive: true
+      code: code.toUpperCase(),
+      discountAmount: Number(discountAmount)
     });
 
-    return NextResponse.json({ success: true, coupon }, { status: 201 });
+    return NextResponse.json({ success: true, coupon });
   } catch {
-    return NextResponse.json(
-      { success: false, error: 'Code already exists or invalid' },
-      { status: 400 }
-    );
+    return NextResponse.json({ success: false, error: 'Server Error' }, { status: 500 });
   }
 }
 
-// DELETE: Remove Coupon
 export async function DELETE(req: Request) {
   try {
     await dbConnect();
     const { searchParams } = new URL(req.url);
     const id = searchParams.get('id');
 
-    if (!id) {
-      return NextResponse.json({ success: false, message: 'Missing coupon ID' }, { status: 400 });
+    if (id) {
+      await Coupon.findByIdAndDelete(id);
+      return NextResponse.json({ success: true });
     }
 
-    await Coupon.findByIdAndDelete(id);
-    return NextResponse.json({ success: true });
+    return NextResponse.json({ success: false, error: 'ID missing' });
   } catch {
-    return NextResponse.json({ success: false }, { status: 500 });
+    return NextResponse.json({ success: false, error: 'Delete Failed' }, { status: 500 });
   }
 }
