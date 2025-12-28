@@ -1,14 +1,18 @@
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
 
+import { NextResponse } from "next/server";
 
-import { NextResponse } from 'next/server';
-import dbConnect from '../../../../lib/db';
-import Order from '../../../../models/Order';
+const getDb = async () => {
+  const dbConnect = (await import("../../../../lib/db")).default;
+  const Order = (await import("../../../../models/Order")).default;
+  await dbConnect();
+  return { Order };
+};
 
 export async function GET() {
   try {
-    await dbConnect();
+    const { Order } = await getDb();
 
     const customers = await Order.aggregate([
       {
@@ -19,15 +23,14 @@ export async function GET() {
           address: { $first: "$customerDetails.address" },
           totalOrders: { $sum: 1 },
           totalSpent: { $sum: "$totalPrice" },
-          lastOrderDate: { $max: "$createdAt" }
-        }
+          lastOrderDate: { $max: "$createdAt" },
+        },
       },
-      { $sort: { lastOrderDate: -1 } }
+      { $sort: { lastOrderDate: -1 } },
     ]);
 
     return NextResponse.json({ success: true, customers });
-
-  } catch (error: any) {
+  } catch {
     return NextResponse.json(
       { success: false, message: "Failed to load customers" },
       { status: 500 }

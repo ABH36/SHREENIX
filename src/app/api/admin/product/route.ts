@@ -1,47 +1,51 @@
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
-import { NextResponse } from 'next/server';
-import dbConnect from '../../../../lib/db';
-import Product from '../../../../models/Product';
+
+import { NextResponse } from "next/server";
+
+const getDb = async () => {
+  const dbConnect = (await import("../../../../lib/db")).default;
+  const Product = (await import("../../../../models/Product")).default;
+  await dbConnect();
+  return { Product };
+};
 
 export async function GET() {
   try {
-    await dbConnect();
+    const { Product } = await getDb();
 
     let product = await Product.findOne().lean();
 
     if (!product) {
       product = await Product.create({
-        name: 'Shreenix Ayurveda',
-        variants: [{ weight: '50g', price: 499, mrp: 999, inStock: true }],
-        heroImages: ['/hero-product.png'],
-        treatmentImages: ['/problem-1.png', '/problem-2.png', '/problem-3.png'],
+        name: "Shreenix Ayurveda",
+        variants: [{ weight: "50g", price: 499, mrp: 999, inStock: true }],
+        heroImages: ["/hero-product.png"],
+        treatmentImages: ["/problem-1.png", "/problem-2.png", "/problem-3.png"],
         deliveryRules: { allowedStates: [], allowedPincodes: [] },
-        topBar: { text: '🎉 Free Delivery on Prepaid Orders!', isActive: true }
+        topBar: { text: "🎉 Free Delivery on Prepaid Orders!", isActive: true },
       });
     }
 
     return NextResponse.json({ success: true, product });
-  } catch (error) {
-    console.error('Product Fetch Error:', error);
+  } catch {
     return NextResponse.json({ success: false }, { status: 500 });
   }
 }
 
 export async function PUT(req: Request) {
   try {
-    await dbConnect();
+    const { Product } = await getDb();
     const body = await req.json();
 
     const product = await Product.findOneAndUpdate({}, body, {
       new: true,
       upsert: true,
-      runValidators: true
+      runValidators: true,
     }).lean();
 
     return NextResponse.json({ success: true, product });
-  } catch (error) {
-    console.error('Product Update Error:', error);
+  } catch {
     return NextResponse.json({ success: false }, { status: 500 });
   }
 }

@@ -1,17 +1,23 @@
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
-import { NextResponse } from 'next/server';
-import dbConnect from '../../../../lib/db';
-import Order from '../../../../models/Order';
+
+import { NextResponse } from "next/server";
+
+const getDb = async () => {
+  const dbConnect = (await import("../../../../lib/db")).default;
+  const Order = (await import("../../../../models/Order")).default;
+  await dbConnect();
+  return { Order };
+};
 
 export async function PUT(req: Request) {
   try {
-    await dbConnect();
+    const { Order } = await getDb();
     const { orderId, status } = await req.json();
 
     if (!orderId || !status) {
       return NextResponse.json(
-        { success: false, message: 'Missing parameters' },
+        { success: false, message: "Missing parameters" },
         { status: 400 }
       );
     }
@@ -24,14 +30,13 @@ export async function PUT(req: Request) {
 
     if (!updatedOrder) {
       return NextResponse.json(
-        { success: false, message: 'Order not found' },
+        { success: false, message: "Order not found" },
         { status: 404 }
       );
     }
 
     return NextResponse.json({ success: true, order: updatedOrder });
-  } catch (error) {
-    console.error('Order Status Update Error:', error);
+  } catch {
     return NextResponse.json({ success: false }, { status: 500 });
   }
 }
