@@ -1,3 +1,4 @@
+export const runtime = "nodejs";
 import mongoose from 'mongoose';
 
 const siteConfigSchema = new mongoose.Schema(
