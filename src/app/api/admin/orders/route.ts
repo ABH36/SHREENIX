@@ -19,7 +19,8 @@ export async function GET() {
       .lean();
 
     return NextResponse.json({ success: true, orders });
-  } catch {
+  } catch (error) {
+    console.error("Orders Fetch Error:", error);
     return NextResponse.json(
       { success: false, message: "Failed to fetch orders" },
       { status: 500 }

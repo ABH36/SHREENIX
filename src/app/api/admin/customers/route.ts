@@ -3,16 +3,11 @@ export const runtime = "nodejs";
 
 import { NextResponse } from "next/server";
 
-const getDb = async () => {
-  const dbConnect = (await import("../../../../lib/db")).default;
-  const Order = (await import("../../../../models/Order")).default;
-  await dbConnect();
-  return { Order };
-};
-
 export async function GET() {
   try {
-    const { Order } = await getDb();
+    const { default: dbConnect } = await import("../../../../lib/db");
+    const { default: Order } = await import("../../../../models/Order");
+    await dbConnect();
 
     const customers = await Order.aggregate([
       {

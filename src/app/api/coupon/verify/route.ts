@@ -24,7 +24,7 @@ export async function POST(req: Request) {
 
     const coupon = await Coupon.findOne({ code: code.toUpperCase() });
 
-    if (!coupon || !coupon.isActive) {
+    if (!coupon) {
       return NextResponse.json(
         { success: false, message: "Invalid or expired coupon" },
         { status: 404 }
@@ -36,7 +36,8 @@ export async function POST(req: Request) {
       discount: coupon.discountAmount,
       code: coupon.code,
     });
-  } catch {
+  } catch (error) {
+    console.error("Coupon Verify Error:", error);
     return NextResponse.json(
       { success: false, message: "Error checking coupon" },
       { status: 500 }

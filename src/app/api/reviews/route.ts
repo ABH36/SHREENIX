@@ -15,7 +15,8 @@ export async function GET() {
     const { Review } = await getDb();
     const reviews = await Review.find().sort({ date: -1 });
     return NextResponse.json({ success: true, reviews });
-  } catch {
+  } catch (error) {
+    console.error("Review Fetch Error:", error);
     return NextResponse.json({ success: false, reviews: [] }, { status: 500 });
   }
 }
@@ -26,7 +27,8 @@ export async function POST(req: Request) {
     const body = await req.json();
     const review = await Review.create(body);
     return NextResponse.json({ success: true, review });
-  } catch {
+  } catch (error) {
+    console.error("Review Create Error:", error);
     return NextResponse.json(
       { success: false, error: "Failed to add review" },
       { status: 500 }
@@ -49,7 +51,8 @@ export async function DELETE(req: Request) {
 
     await Review.findByIdAndDelete(id);
     return NextResponse.json({ success: true });
-  } catch {
+  } catch (error) {
+    console.error("Review Delete Error:", error);
     return NextResponse.json({ success: false }, { status: 500 });
   }
 }

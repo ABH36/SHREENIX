@@ -57,9 +57,10 @@ export async function POST(req: Request) {
       },
       { status: 201 }
     );
-  } catch (error: any) {
+  } catch (error) {
+    console.error("Order Create Error:", error);
     return NextResponse.json(
-      { success: false, message: "Server Error: " + error.message },
+      { success: false, message: "Server Error" },
       { status: 500 }
     );
   }

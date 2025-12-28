@@ -36,7 +36,8 @@ export async function PUT(req: Request) {
     }
 
     return NextResponse.json({ success: true, order: updatedOrder });
-  } catch {
+  } catch (error) {
+    console.error("Order Status Update Error:", error);
     return NextResponse.json({ success: false }, { status: 500 });
   }
 }

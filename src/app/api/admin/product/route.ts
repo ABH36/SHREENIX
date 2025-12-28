@@ -28,7 +28,8 @@ export async function GET() {
     }
 
     return NextResponse.json({ success: true, product });
-  } catch {
+  } catch (error) {
+    console.error("Product Fetch Error:", error);
     return NextResponse.json({ success: false }, { status: 500 });
   }
 }
@@ -45,7 +46,8 @@ export async function PUT(req: Request) {
     }).lean();
 
     return NextResponse.json({ success: true, product });
-  } catch {
+  } catch (error) {
+    console.error("Product Update Error:", error);
     return NextResponse.json({ success: false }, { status: 500 });
   }
 }
