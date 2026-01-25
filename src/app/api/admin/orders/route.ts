@@ -1,28 +1,61 @@
+// src/app/api/admin/orders/route.ts
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
 
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from 'next/server';
+import { getAdminUser } from '../../../../lib/auth';
+import dbConnect from '../../../../lib/db';
+import Order from '../../../../models/Order';
 
-const getDb = async () => {
-  const dbConnect = (await import("../../../../lib/db")).default;
-  const Order = (await import("../../../../models/Order")).default;
-  await dbConnect();
-  return { Order };
-};
-
-export async function GET() {
+// GET: Fetch all orders (Admin only)
+export async function GET(req: NextRequest) {
   try {
-    const { Order } = await getDb();
+    // Auth check
+    const user = await getAdminUser();
+    if (!user) {
+      return NextResponse.json(
+        { success: false, error: 'Unauthorized' },
+        { status: 401 }
+      );
+    }
 
-    const orders = await Order.find({})
+    await dbConnect();
+
+    // Get query parameters for filtering
+    const { searchParams } = new URL(req.url);
+    const status = searchParams.get('status');
+    const limit = parseInt(searchParams.get('limit') || '100');
+    const page = parseInt(searchParams.get('page') || '1');
+
+    // Build query
+    const query: any = {};
+    if (status && status !== 'All') {
+      query.orderStatus = status;
+    }
+
+    // Fetch orders with pagination
+    const orders = await Order.find(query)
       .sort({ createdAt: -1 })
+      .limit(limit)
+      .skip((page - 1) * limit)
       .lean();
 
-    return NextResponse.json({ success: true, orders });
+    const totalOrders = await Order.countDocuments(query);
+
+    return NextResponse.json({
+      success: true,
+      orders,
+      pagination: {
+        total: totalOrders,
+        page,
+        limit,
+        totalPages: Math.ceil(totalOrders / limit)
+      }
+    });
   } catch (error) {
-    console.error("Orders Fetch Error:", error);
+    console.error('Orders fetch error:', error);
     return NextResponse.json(
-      { success: false, message: "Failed to fetch orders" },
+      { success: false, error: 'Failed to fetch orders' },
       { status: 500 }
     );
   }

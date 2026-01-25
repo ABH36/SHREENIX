@@ -1,3 +1,4 @@
+// src/models/Review.ts
 export const runtime = "nodejs";
 import mongoose from 'mongoose';
 
@@ -5,28 +6,48 @@ const reviewSchema = new mongoose.Schema(
   {
     name: {
       type: String,
-      required: true,
-      trim: true
+      required: [true, 'Name is required'],
+      trim: true,
+      maxlength: [100, 'Name cannot exceed 100 characters']
     },
+
     location: {
       type: String,
-      default: 'India',
-      trim: true
+      required: [true, 'Location is required'],
+      trim: true,
+      maxlength: [100, 'Location cannot exceed 100 characters']
     },
+
     rating: {
       type: Number,
-      default: 5,
-      min: 1,
-      max: 5
+      required: [true, 'Rating is required'],
+      min: [1, 'Rating must be at least 1'],
+      max: [5, 'Rating cannot exceed 5'],
+      default: 5
     },
+
     comment: {
       type: String,
-      required: true,
-      trim: true
+      required: [true, 'Comment is required'],
+      trim: true,
+      maxlength: [500, 'Comment cannot exceed 500 characters']
     },
-    date: {
-      type: Date,
-      default: Date.now
+
+    isApproved: {
+      type: Boolean,
+      default: true // Auto-approve for now
+    },
+
+    isFeatured: {
+      type: Boolean,
+      default: false
+    },
+
+    // Optional: Link to order if review is from verified purchase
+    orderId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Order',
+      default: null
     }
   },
   {
@@ -35,5 +56,8 @@ const reviewSchema = new mongoose.Schema(
   }
 );
 
-export default mongoose.models.Review ||
-  mongoose.model('Review', reviewSchema);
+// Indexes
+reviewSchema.index({ isApproved: 1, rating: -1 });
+reviewSchema.index({ createdAt: -1 });
+
+export default mongoose.models.Review || mongoose.model('Review', reviewSchema);

@@ -1,218 +1,245 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
-import { useRouter, usePathname } from 'next/navigation';
+import { motion } from 'framer-motion';
 import {
-  ArrowLeft, Star, Trash2, Plus, User, MapPin,
-  LayoutDashboard, ShoppingBag, Users, LogOut, Settings, MessageSquare, TicketPercent, Menu, X, Loader2
+  Star, Trash2, Plus, User, MapPin, Loader2, MessageSquare
 } from 'lucide-react';
 
-export default function ReviewsAdmin() {
-  const router = useRouter();
-  const pathname = usePathname();
+interface Review {
+  _id: string;
+  name: string;
+  location: string;
+  rating: number;
+  comment: string;
+  createdAt: string;
+}
 
-  const [reviews, setReviews] = useState<any[]>([]);
+export default function ReviewsPage() {
+  const [reviews, setReviews] = useState<Review[]>([]);
   const [loading, setLoading] = useState(false);
-  const [isMobileNavOpen, setIsMobileNavOpen] = useState(false);
-  const [form, setForm] = useState({ name: '', location: '', rating: 5, comment: '' });
+  const [submitting, setSubmitting] = useState(false);
+  const [form, setForm] = useState({
+    name: '',
+    location: '',
+    rating: 5,
+    comment: ''
+  });
 
-  useEffect(() => { fetchReviews(); }, []);
+  useEffect(() => {
+    fetchReviews();
+  }, []);
 
   const fetchReviews = async () => {
     try {
       const res = await fetch('/api/reviews');
       const data = await res.json();
-      if (data.success) setReviews(data.reviews);
-    } catch {
-      console.error('Review fetch error');
+      if (data.success) {
+        setReviews(data.reviews);
+      }
+    } catch (error) {
+      console.error('Reviews fetch error:', error);
     }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setLoading(true);
-    await fetch('/api/reviews', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(form)
-    });
-    setForm({ name: '', location: '', rating: 5, comment: '' });
-    fetchReviews();
-    setLoading(false);
-  };
+    setSubmitting(true);
 
-  const handleDelete = async (id: string) => {
-    if (!confirm('Delete this review?')) return;
-    await fetch(`/api/reviews?id=${id}`, { method: 'DELETE' });
-    fetchReviews();
-  };
-
-  const handleLogout = async () => {
     try {
-      await fetch('/api/admin/logout', { method: 'POST' });
-      router.replace('/admin/login');
-      router.refresh();
-    } catch {
-      router.replace('/admin/login');
+      const res = await fetch('/api/reviews', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(form)
+      });
+
+      if (res.ok) {
+        setForm({ name: '', location: '', rating: 5, comment: '' });
+        fetchReviews();
+      } else {
+        alert('Failed to add review');
+      }
+    } catch (error) {
+      console.error('Review submit error:', error);
+      alert('Failed to add review');
+    } finally {
+      setSubmitting(false);
     }
   };
 
-  const SidebarContent = () => (
-    <div className="flex flex-col h-full justify-between bg-white border-r border-gray-200">
-      <div>
-        <div className="h-20 flex items-center px-8 border-b border-gray-100">
-          <h1 className="text-2xl font-serif font-bold text-emerald-900 tracking-tight">
-            Shreenix<span className="text-emerald-500">.</span>
-          </h1>
-        </div>
-        <nav className="p-4 space-y-2">
-          {[
-            { icon: LayoutDashboard, label: 'Dashboard', path: '/admin/dashboard' },
-            { icon: ShoppingBag, label: 'Products', path: '/admin/products' },
-            { icon: Users, label: 'Customers', path: '/admin/customers' },
-            { icon: MessageSquare, label: 'Reviews', path: '/admin/reviews' },
-            { icon: TicketPercent, label: 'Coupons', path: '/admin/coupons' },
-            { icon: Settings, label: 'Settings', path: '/admin/settings' }
-          ].map(item => (
-            <button
-              key={item.path}
-              onClick={() => { router.push(item.path); setIsMobileNavOpen(false); }}
-              className={`flex items-center gap-3 w-full px-4 py-3 rounded-xl font-medium transition-all ${
-                pathname === item.path ? 'bg-emerald-50 text-emerald-700' : 'text-gray-500 hover:bg-gray-50'
-              }`}
-            >
-              <item.icon size={20} /> {item.label}
-            </button>
-          ))}
-        </nav>
-      </div>
-      <div className="p-4 border-t border-gray-100">
-        <button
-          onClick={handleLogout}
-          className="flex items-center gap-3 w-full px-4 py-3 text-red-500 hover:bg-red-50 rounded-xl font-medium transition-all"
-        >
-          <LogOut size={20} /> Logout
-        </button>
-      </div>
-    </div>
-  );
+  const handleDelete = async (id: string) => {
+    if (!confirm('Are you sure you want to delete this review?')) return;
+
+    try {
+      await fetch(`/api/reviews?id=${id}`, { method: 'DELETE' });
+      fetchReviews();
+    } catch (error) {
+      console.error('Review delete error:', error);
+    }
+  };
 
   return (
-    <div className="flex h-screen bg-[#F3F4F6] font-sans overflow-hidden">
-      <aside className="w-64 hidden md:flex flex-col">
-        <SidebarContent />
-      </aside>
+    <div className="space-y-6">
+      {/* Header */}
+      <div>
+        <h1 className="text-3xl font-bold text-gray-900">Customer Reviews</h1>
+        <p className="text-gray-500 mt-1">Manage customer testimonials</p>
+      </div>
 
-      {isMobileNavOpen && (
-        <div className="fixed inset-0 z-50 md:hidden flex">
-          <div className="fixed inset-0 bg-black/50 backdrop-blur-sm" onClick={() => setIsMobileNavOpen(false)} />
-          <div className="relative w-3/4 max-w-xs bg-white h-full shadow-2xl flex flex-col">
-            <button onClick={() => setIsMobileNavOpen(false)} className="absolute top-4 right-4 p-2 bg-gray-100 rounded-full">
-              <X size={20} />
-            </button>
-            <SidebarContent />
-          </div>
-        </div>
-      )}
+      <div className="grid lg:grid-cols-3 gap-6">
+        {/* Add Review Form */}
+        <div className="lg:col-span-1">
+          <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 sticky top-6">
+            <h2 className="font-bold text-lg mb-6 flex items-center gap-2 text-emerald-800">
+              <Plus size={20} />
+              Add New Review
+            </h2>
 
-      <main className="flex-1 flex flex-col h-full overflow-hidden">
-        <div className="bg-white border-b px-6 py-4 flex items-center gap-4 shrink-0">
-          <button onClick={() => setIsMobileNavOpen(true)} className="md:hidden p-2 bg-gray-100 rounded-lg">
-            <Menu size={20} />
-          </button>
-          <h1 className="text-xl font-bold flex items-center gap-2 text-gray-800">
-            <MessageSquare className="text-emerald-600" size={24} /> Manage Reviews
-          </h1>
-        </div>
-
-        <div className="flex-1 overflow-y-auto p-4 md:p-8">
-          <div className="grid lg:grid-cols-3 gap-8 max-w-6xl mx-auto">
-            <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-200 h-fit sticky top-0">
-              <h2 className="font-bold mb-4 flex items-center gap-2 text-emerald-800 text-lg">
-                <Plus size={20} /> Add New Review
-              </h2>
-              <form onSubmit={handleSubmit} className="space-y-4">
-                {['name', 'location'].map((field, i) => (
-                  <div key={i} className="relative">
-                    {field === 'name'
-                      ? <User className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
-                      : <MapPin className="absolute left-3 top-3 h-4 w-4 text-gray-400" />}
-                    <input
-                      required
-                      placeholder={field === 'name' ? 'Customer Name' : 'City / Location'}
-                      value={(form as any)[field]}
-                      onChange={e => setForm({ ...form, [field]: e.target.value })}
-                      className="w-full pl-9 p-3 border rounded-xl text-sm font-medium outline-none focus:ring-2 focus:ring-emerald-100"
-                    />
-                  </div>
-                ))}
-
-                <div className="space-y-1">
-                  <label className="text-xs font-bold text-gray-500 uppercase">Rating</label>
-                  <select
-                    value={form.rating}
-                    onChange={e => setForm({ ...form, rating: +e.target.value })}
-                    className="w-full p-3 border rounded-xl font-bold text-amber-500 outline-none"
-                  >
-                    {[5, 4, 3, 2, 1].map(r => (
-                      <option key={r} value={r}>{'⭐'.repeat(r)} ({r} Stars)</option>
-                    ))}
-                  </select>
-                </div>
-
-                <textarea
-                  rows={4}
+            <form onSubmit={handleSubmit} className="space-y-4">
+              <div className="relative">
+                <User className="absolute left-3 top-3 h-5 w-5 text-gray-400" />
+                <input
                   required
+                  type="text"
+                  placeholder="Customer Name"
+                  value={form.name}
+                  onChange={(e) => setForm({ ...form, name: e.target.value })}
+                  className="w-full pl-10 pr-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-transparent outline-none"
+                />
+              </div>
+
+              <div className="relative">
+                <MapPin className="absolute left-3 top-3 h-5 w-5 text-gray-400" />
+                <input
+                  required
+                  type="text"
+                  placeholder="City / Location"
+                  value={form.location}
+                  onChange={(e) => setForm({ ...form, location: e.target.value })}
+                  className="w-full pl-10 pr-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-transparent outline-none"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                  Rating
+                </label>
+                <div className="flex gap-2">
+                  {[1, 2, 3, 4, 5].map((star) => (
+                    <button
+                      key={star}
+                      type="button"
+                      onClick={() => setForm({ ...form, rating: star })}
+                      className="transition-transform hover:scale-110"
+                    >
+                      <Star
+                        size={32}
+                        className={star <= form.rating ? 'fill-yellow-400 text-yellow-400' : 'text-gray-300'}
+                      />
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div>
+                <textarea
+                  required
+                  rows={4}
                   placeholder="Write customer review here..."
                   value={form.comment}
-                  onChange={e => setForm({ ...form, comment: e.target.value })}
-                  className="w-full p-3 border rounded-xl text-sm outline-none focus:ring-2 focus:ring-emerald-100"
+                  onChange={(e) => setForm({ ...form, comment: e.target.value })}
+                  className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-transparent outline-none resize-none"
                 />
+              </div>
 
-                <button
-                  disabled={loading}
-                  className="w-full bg-emerald-800 text-white py-3 rounded-xl font-bold hover:bg-black transition-all shadow-lg active:scale-95 disabled:opacity-70"
-                >
-                  {loading ? <Loader2 className="animate-spin mx-auto" /> : 'Publish Review'}
-                </button>
-              </form>
+              <button
+                type="submit"
+                disabled={submitting}
+                className="w-full bg-emerald-600 text-white py-3 rounded-xl font-bold hover:bg-emerald-700 transition-colors shadow-lg disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+              >
+                {submitting ? (
+                  <>
+                    <Loader2 className="animate-spin" size={20} />
+                    Publishing...
+                  </>
+                ) : (
+                  <>
+                    <Plus size={20} />
+                    Publish Review
+                  </>
+                )}
+              </button>
+            </form>
+          </div>
+        </div>
+
+        {/* Reviews List */}
+        <div className="lg:col-span-2 space-y-4">
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="font-bold text-lg text-gray-800">
+              Live Reviews ({reviews.length})
+            </h2>
+          </div>
+
+          {reviews.length === 0 ? (
+            <div className="bg-white rounded-xl border-2 border-dashed border-gray-200 p-12 text-center">
+              <MessageSquare size={48} className="mx-auto mb-4 text-gray-300" />
+              <p className="text-gray-500">No reviews added yet</p>
+              <p className="text-sm text-gray-400 mt-2">Add your first customer review</p>
             </div>
-
-            <div className="lg:col-span-2 space-y-4">
-              <h2 className="font-bold text-gray-800 text-lg">Live Reviews ({reviews.length})</h2>
-
-              {reviews.length === 0 && (
-                <div className="p-10 text-center text-gray-400 bg-white rounded-2xl border border-dashed border-gray-300">
-                  No reviews added yet.
-                </div>
-              )}
-
-              {reviews.map(r => (
-                <div key={r._id} className="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm flex flex-col sm:flex-row justify-between gap-4 hover:shadow-md transition-shadow">
-                  <div>
-                    <div className="flex items-center gap-2 mb-1">
-                      <h3 className="font-bold text-gray-900">{r.name}</h3>
-                      <span className="text-xs font-bold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full">
-                        {r.location}
-                      </span>
+          ) : (
+            reviews.map((review, index) => (
+              <motion.div
+                key={review._id}
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: index * 0.05 }}
+                className="bg-white rounded-xl border border-gray-100 shadow-sm p-6 hover:shadow-md transition-all"
+              >
+                <div className="flex justify-between items-start">
+                  <div className="flex-1">
+                    <div className="flex items-center gap-3 mb-3">
+                      <div className="w-12 h-12 bg-gradient-to-br from-emerald-500 to-emerald-700 rounded-full flex items-center justify-center text-white font-bold text-lg">
+                        {review.name.charAt(0).toUpperCase()}
+                      </div>
+                      <div>
+                        <h3 className="font-bold text-gray-900">{review.name}</h3>
+                        <p className="text-sm text-emerald-600 font-medium flex items-center gap-1">
+                          <MapPin size={12} />
+                          {review.location}
+                        </p>
+                      </div>
                     </div>
-                    <div className="flex text-amber-400 mb-2">
-                      {[...Array(r.rating)].map((_, i) => <Star key={i} size={14} fill="currentColor" />)}
+
+                    <div className="flex gap-1 mb-3">
+                      {[...Array(review.rating)].map((_, i) => (
+                        <Star key={i} size={16} className="fill-yellow-400 text-yellow-400" />
+                      ))}
                     </div>
-                    <p className="text-sm text-gray-600 leading-relaxed">"{r.comment}"</p>
+
+                    <p className="text-gray-700 leading-relaxed">"{review.comment}"</p>
+
+                    <p className="text-xs text-gray-400 mt-3">
+                      {new Date(review.createdAt).toLocaleDateString('en-IN', {
+                        day: 'numeric',
+                        month: 'long',
+                        year: 'numeric'
+                      })}
+                    </p>
                   </div>
+
                   <button
-                    onClick={() => handleDelete(r._id)}
-                    className="self-start sm:self-center text-red-400 hover:text-red-600 hover:bg-red-50 p-2 rounded-lg transition-colors"
+                    onClick={() => handleDelete(review._id)}
+                    className="p-2 text-red-500 hover:bg-red-50 rounded-lg transition-colors"
                   >
                     <Trash2 size={20} />
                   </button>
                 </div>
-              ))}
-            </div>
-          </div>
+              </motion.div>
+            ))
+          )}
         </div>
-      </main>
+      </div>
     </div>
   );
 }

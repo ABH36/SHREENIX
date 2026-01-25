@@ -1,43 +1,88 @@
+// src/app/api/admin/settings/route.ts
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
 
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from 'next/server';
+import { getAdminUser } from '../../../../lib/auth';
+import dbConnect from '../../../../lib/db';
+import Settings from '../../../../models/Settings';
 
-const getDb = async () => {
-  const dbConnect = (await import("../../../../lib/db")).default;
-  const SiteConfig = (await import("../../../../models/SiteConfig")).default;
-  await dbConnect();
-  return { SiteConfig };
-};
-
+// GET: Fetch settings (Public for contact info)
 export async function GET() {
   try {
-    const { SiteConfig } = await getDb();
+    await dbConnect();
 
-    let config = await SiteConfig.findOne().lean();
-    if (!config) config = await SiteConfig.create({});
+    let settings = await Settings.findOne().lean();
 
-    return NextResponse.json({ success: true, config });
+    if (!settings) {
+      // Create default settings
+      settings = await Settings.create({
+        phone: '9630703732',
+        email: 'shreenix.care@gmail.com',
+        address: 'Indore, Madhya Pradesh'
+      });
+    }
+
+    return NextResponse.json({
+      success: true,
+      config: settings
+    });
+
   } catch (error) {
-    console.error("SiteConfig Fetch Error:", error);
-    return NextResponse.json({ success: false }, { status: 500 });
+    console.error('Settings fetch error:', error);
+    return NextResponse.json(
+      { success: false, error: 'Failed to fetch settings' },
+      { status: 500 }
+    );
   }
 }
 
-export async function PUT(req: Request) {
+// PUT: Update settings (Admin only)
+export async function PUT(req: NextRequest) {
   try {
-    const { SiteConfig } = await getDb();
+    // Auth check
+    const user = await getAdminUser();
+    if (!user) {
+      return NextResponse.json(
+        { success: false, error: 'Unauthorized' },
+        { status: 401 }
+      );
+    }
+
+    await dbConnect();
+
     const body = await req.json();
 
-    const config = await SiteConfig.findOneAndUpdate({}, body, {
-      new: true,
-      upsert: true,
-      runValidators: true,
-    }).lean();
+    // Update or create settings
+    const settings = await Settings.findOneAndUpdate(
+      {},
+      body,
+      {
+        new: true,
+        upsert: true,
+        runValidators: true
+      }
+    );
 
-    return NextResponse.json({ success: true, config });
-  } catch (error) {
-    console.error("SiteConfig Update Error:", error);
-    return NextResponse.json({ success: false }, { status: 500 });
+    return NextResponse.json({
+      success: true,
+      config: settings,
+      message: 'Settings updated successfully'
+    });
+
+  } catch (error: any) {
+    console.error('Settings update error:', error);
+
+    if (error.name === 'ValidationError') {
+      return NextResponse.json(
+        { success: false, error: error.message },
+        { status: 400 }
+      );
+    }
+
+    return NextResponse.json(
+      { success: false, error: 'Failed to update settings' },
+      { status: 500 }
+    );
   }
 }

@@ -1,66 +1,90 @@
-export const dynamic = "force-dynamic";
+// src/app/api/order/route.ts
 export const runtime = "nodejs";
 
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from 'next/server';
+import dbConnect from '../../../lib/db';
+import Order from '../../../models/Order';
 
-const getDb = async () => {
-  const dbConnect = (await import("../../../lib/db")).default;
-  const Order = (await import("../../../models/Order")).default;
-  await dbConnect();
-  return { Order };
-};
-
-export async function POST(req: Request) {
+// POST: Create new order (Public route)
+export async function POST(req: NextRequest) {
   try {
-    const { Order } = await getDb();
+    await dbConnect();
+
     const body = await req.json();
 
-    const { name, phone, address, city, pincode, state, quantity, amount } = body;
+    // Extract data
+    const { name, phone, address, city, pincode, state, productName, quantity, amount } = body;
 
-    if (!name || !phone || !address || !pincode) {
+    // Validation
+    if (!name || !phone || !address || !city || !pincode || !state) {
       return NextResponse.json(
-        { success: false, message: "Please fill all required fields" },
+        { success: false, error: 'All fields are required' },
         { status: 400 }
       );
     }
 
-    const newOrder = await Order.create({
+    // Phone validation
+    if (!/^[0-9]{10}$/.test(phone)) {
+      return NextResponse.json(
+        { success: false, error: 'Invalid phone number' },
+        { status: 400 }
+      );
+    }
+
+    // Pincode validation
+    if (!/^[0-9]{6}$/.test(pincode)) {
+      return NextResponse.json(
+        { success: false, error: 'Invalid pincode' },
+        { status: 400 }
+      );
+    }
+
+    // Get IP address for fraud detection
+    const ipAddress = req.headers.get('x-forwarded-for') || 
+                     req.headers.get('x-real-ip') || 
+                     'unknown';
+
+    // Create order
+    const order = await Order.create({
       customerDetails: {
-        name,
-        phone,
-        address,
-        city,
-        pincode,
-        state: state || "India",
+        name: name.trim(),
+        phone: phone.trim(),
+        address: address.trim(),
+        city: city.trim(),
+        pincode: pincode.trim(),
+        state: state.trim()
       },
       orderItems: [
         {
-          name: "Shreenix Fungal Infection Cream",
+          name: productName || 'Shreenix Ayurveda',
           qty: quantity || 1,
-          price: 499,
-          product: "65f2a3b1c9e8d7f6a5b4c3d2",
-        },
+          price: amount || 0
+        }
       ],
-      paymentMethod: "COD",
-      itemsPrice: 499 * (quantity || 1),
-      shippingPrice: 0,
-      totalPrice: amount || 499,
-      isPaid: false,
-      orderStatus: "Processing",
+      totalPrice: amount || 0,
+      paymentMethod: 'COD',
+      ipAddress
     });
 
+    return NextResponse.json({
+      success: true,
+      orderId: order._id,
+      message: 'Order placed successfully'
+    });
+
+  } catch (error: any) {
+    console.error('Order creation error:', error);
+
+    // Handle duplicate orders (same phone + same minute)
+    if (error.code === 11000) {
+      return NextResponse.json(
+        { success: false, error: 'Duplicate order detected' },
+        { status: 400 }
+      );
+    }
+
     return NextResponse.json(
-      {
-        success: true,
-        message: "Order Placed Successfully!",
-        orderId: newOrder._id,
-      },
-      { status: 201 }
-    );
-  } catch (error) {
-    console.error("Order Create Error:", error);
-    return NextResponse.json(
-      { success: false, message: "Server Error" },
+      { success: false, error: 'Failed to place order' },
       { status: 500 }
     );
   }

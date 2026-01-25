@@ -1,33 +1,43 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
-import { useRouter, usePathname } from 'next/navigation';
+import { motion } from 'framer-motion';
 import {
-  ArrowLeft, TicketPercent, Trash2, Sparkles, LayoutDashboard,
-  ShoppingBag, Users, LogOut, Settings, MessageSquare, Menu, X
+  Ticket, Trash2, Plus, Sparkles, Tag, Percent, IndianRupee
 } from 'lucide-react';
 
-interface CouponType {
+interface Coupon {
   _id: string;
   code: string;
   discountAmount: number;
+  discountType: string;
+  isActive: boolean;
+  usedCount: number;
+  createdAt: string;
 }
 
-export default function CouponManager() {
-  const router = useRouter();
-  const pathname = usePathname();
-
-  const [coupons, setCoupons] = useState<CouponType[]>([]);
+export default function CouponsPage() {
+  const [coupons, setCoupons] = useState<Coupon[]>([]);
   const [loading, setLoading] = useState(false);
-  const [form, setForm] = useState({ code: '', discountAmount: '' });
-  const [isMobileNavOpen, setIsMobileNavOpen] = useState(false);
+  const [form, setForm] = useState({
+    code: '',
+    discountAmount: ''
+  });
 
-  useEffect(() => { loadCoupons(); }, []);
+  useEffect(() => {
+    fetchCoupons();
+  }, []);
 
-  const loadCoupons = async () => {
-    const res = await fetch('/api/admin/coupons');
-    const data = await res.json();
-    if (data.success) setCoupons(data.coupons);
+  const fetchCoupons = async () => {
+    try {
+      const res = await fetch('/api/admin/coupons');
+      const data = await res.json();
+      if (data.success) {
+        setCoupons(data.coupons);
+      }
+    } catch (error) {
+      console.error('Coupons fetch error:', error);
+    }
   };
 
   const handleCreate = async (e: React.FormEvent) => {
@@ -35,182 +45,235 @@ export default function CouponManager() {
     if (!form.code || !form.discountAmount) return;
 
     setLoading(true);
-    const res = await fetch('/api/admin/coupons', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(form)
-    });
+    try {
+      const res = await fetch('/api/admin/coupons', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(form)
+      });
 
-    const data = await res.json();
-    if (data.success) {
-      setForm({ code: '', discountAmount: '' });
-      loadCoupons();
-    } else {
-      alert(data.error || 'Coupon already exists');
+      const data = await res.json();
+      if (data.success) {
+        setForm({ code: '', discountAmount: '' });
+        fetchCoupons();
+      } else {
+        alert(data.error || 'Failed to create coupon');
+      }
+    } catch (error) {
+      console.error('Coupon creation error:', error);
+      alert('Failed to create coupon');
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
   };
 
   const handleDelete = async (id: string) => {
-    if (!confirm('Delete this coupon?')) return;
-    await fetch(`/api/admin/coupons?id=${id}`, { method: 'DELETE' });
-    loadCoupons();
-  };
+    if (!confirm('Are you sure you want to delete this coupon?')) return;
 
-  const handleLogout = async () => {
     try {
-      await fetch('/api/admin/logout', { method: 'POST' });
-      router.replace('/admin/login');
-      router.refresh();
-    } catch {
-      router.replace('/admin/login');
+      await fetch(`/api/admin/coupons?id=${id}`, { method: 'DELETE' });
+      fetchCoupons();
+    } catch (error) {
+      console.error('Coupon delete error:', error);
     }
   };
 
-  const SidebarContent = () => (
-    <div className="flex flex-col h-full justify-between bg-white border-r border-gray-200">
-      <div>
-        <div className="h-20 flex items-center px-8 border-b border-gray-100">
-          <h1 className="text-2xl font-serif font-bold text-emerald-900 tracking-tight">
-            Shreenix<span className="text-emerald-500">.</span>
-          </h1>
-        </div>
-        <nav className="p-4 space-y-2">
-          {[
-            { icon: LayoutDashboard, label: 'Dashboard', path: '/admin/dashboard' },
-            { icon: ShoppingBag, label: 'Products', path: '/admin/products' },
-            { icon: Users, label: 'Customers', path: '/admin/customers' },
-            { icon: MessageSquare, label: 'Reviews', path: '/admin/reviews' },
-            { icon: TicketPercent, label: 'Coupons', path: '/admin/coupons' },
-            { icon: Settings, label: 'Settings', path: '/admin/settings' }
-          ].map(item => (
-            <button
-              key={item.path}
-              onClick={() => { router.push(item.path); setIsMobileNavOpen(false); }}
-              className={`flex items-center gap-3 w-full px-4 py-3 rounded-xl font-medium transition-all ${
-                pathname === item.path ? 'bg-emerald-50 text-emerald-700' : 'text-gray-500 hover:bg-gray-50'
-              }`}
-            >
-              <item.icon size={20} /> {item.label}
-            </button>
-          ))}
-        </nav>
-      </div>
-      <div className="p-4 border-t border-gray-100">
-        <button
-          onClick={handleLogout}
-          className="flex items-center gap-3 w-full px-4 py-3 text-red-500 hover:bg-red-50 rounded-xl font-medium transition-all"
-        >
-          <LogOut size={20} /> Logout
-        </button>
-      </div>
-    </div>
-  );
+  const generateRandomCode = () => {
+    const codes = ['SAVE', 'DEAL', 'OFFER', 'FIRST', 'NEW'];
+    const numbers = Math.floor(Math.random() * 900) + 100;
+    const randomCode = codes[Math.floor(Math.random() * codes.length)] + numbers;
+    setForm({ ...form, code: randomCode });
+  };
 
   return (
-    <div className="flex h-screen bg-[#F3F4F6] font-sans overflow-hidden">
-      <aside className="w-64 hidden md:flex flex-col">
-        <SidebarContent />
-      </aside>
+    <div className="space-y-6">
+      {/* Header */}
+      <div>
+        <h1 className="text-3xl font-bold text-gray-900">Coupon Manager</h1>
+        <p className="text-gray-500 mt-1">Create and manage discount coupons</p>
+      </div>
 
-      {isMobileNavOpen && (
-        <div className="fixed inset-0 z-50 md:hidden flex">
-          <div className="fixed inset-0 bg-black/50 backdrop-blur-sm" onClick={() => setIsMobileNavOpen(false)} />
-          <div className="relative w-3/4 max-w-xs bg-white h-full shadow-2xl flex flex-col">
-            <button onClick={() => setIsMobileNavOpen(false)} className="absolute top-4 right-4 p-2 bg-gray-100 rounded-full">
-              <X size={20} />
-            </button>
-            <SidebarContent />
+      {/* Stats */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div className="bg-white rounded-xl p-5 border border-gray-100 shadow-sm">
+          <div className="flex items-center gap-3 mb-2">
+            <div className="p-2 bg-emerald-100 rounded-lg">
+              <Ticket className="text-emerald-600" size={20} />
+            </div>
+            <p className="text-sm text-gray-600 font-medium">Active Coupons</p>
+          </div>
+          <p className="text-3xl font-bold text-gray-900">
+            {coupons.filter(c => c.isActive).length}
+          </p>
+        </div>
+
+        <div className="bg-white rounded-xl p-5 border border-gray-100 shadow-sm">
+          <div className="flex items-center gap-3 mb-2">
+            <div className="p-2 bg-blue-100 rounded-lg">
+              <Tag className="text-blue-600" size={20} />
+            </div>
+            <p className="text-sm text-gray-600 font-medium">Total Used</p>
+          </div>
+          <p className="text-3xl font-bold text-gray-900">
+            {coupons.reduce((sum, c) => sum + c.usedCount, 0)}
+          </p>
+        </div>
+
+        <div className="bg-white rounded-xl p-5 border border-gray-100 shadow-sm">
+          <div className="flex items-center gap-3 mb-2">
+            <div className="p-2 bg-purple-100 rounded-lg">
+              <Percent className="text-purple-600" size={20} />
+            </div>
+            <p className="text-sm text-gray-600 font-medium">Avg Discount</p>
+          </div>
+          <p className="text-3xl font-bold text-gray-900">
+            ₹{coupons.length > 0 
+              ? Math.round(coupons.reduce((sum, c) => sum + c.discountAmount, 0) / coupons.length)
+              : 0
+            }
+          </p>
+        </div>
+      </div>
+
+      <div className="grid lg:grid-cols-3 gap-6">
+        {/* Create Form */}
+        <div className="lg:col-span-1">
+          <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 sticky top-6">
+            <h2 className="flex items-center gap-2 text-emerald-800 font-bold mb-6 text-lg">
+              <Sparkles size={20} />
+              Create Coupon
+            </h2>
+
+            <form onSubmit={handleCreate} className="space-y-4">
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                  Coupon Code
+                </label>
+                <div className="flex gap-2">
+                  <input
+                    required
+                    type="text"
+                    placeholder="e.g. SAVE100"
+                    value={form.code}
+                    onChange={(e) => setForm({ ...form, code: e.target.value.toUpperCase() })}
+                    className="flex-1 px-4 py-3 border border-gray-200 rounded-xl font-bold uppercase tracking-wider focus:ring-2 focus:ring-emerald-500 focus:border-transparent outline-none"
+                    maxLength={20}
+                  />
+                  <button
+                    type="button"
+                    onClick={generateRandomCode}
+                    className="px-3 py-3 bg-gray-100 hover:bg-gray-200 rounded-xl transition-colors"
+                    title="Generate random code"
+                  >
+                    <Sparkles size={20} className="text-gray-600" />
+                  </button>
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                  Discount Amount (₹)
+                </label>
+                <div className="relative">
+                  <IndianRupee className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
+                  <input
+                    required
+                    type="number"
+                    placeholder="50"
+                    min="1"
+                    value={form.discountAmount}
+                    onChange={(e) => setForm({ ...form, discountAmount: e.target.value })}
+                    className="w-full pl-10 pr-4 py-3 border border-gray-200 rounded-xl font-bold focus:ring-2 focus:ring-emerald-500 focus:border-transparent outline-none"
+                  />
+                </div>
+              </div>
+
+              <button
+                type="submit"
+                disabled={loading}
+                className="w-full bg-emerald-600 text-white py-4 rounded-xl font-bold hover:bg-emerald-700 transition-all shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {loading ? 'Creating...' : 'Create Coupon'}
+              </button>
+            </form>
           </div>
         </div>
-      )}
 
-      <main className="flex-1 flex flex-col h-full overflow-hidden">
-        <div className="bg-white border-b px-6 py-4 flex items-center gap-4 shrink-0">
-          <button onClick={() => setIsMobileNavOpen(true)} className="md:hidden p-2 bg-gray-100 rounded-lg">
-            <Menu size={20} />
-          </button>
-          <h1 className="text-xl font-bold flex items-center gap-2 text-gray-800">
-            <TicketPercent className="text-emerald-600" size={24} /> Coupon Manager
-          </h1>
-        </div>
+        {/* Coupons List */}
+        <div className="lg:col-span-2 space-y-4">
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="font-bold text-lg text-gray-800">
+              Active Coupons ({coupons.length})
+            </h2>
+          </div>
 
-        <div className="flex-1 overflow-y-auto p-6 md:p-8">
-          <div className="max-w-5xl mx-auto grid md:grid-cols-2 gap-8">
-            <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-200 h-fit">
-              <h2 className="flex items-center gap-2 text-emerald-800 font-bold mb-6 text-lg">
-                <Sparkles size={20} /> Create New Coupon
-              </h2>
-              <form onSubmit={handleCreate} className="space-y-4">
-                <div>
-                  <label className="text-xs font-bold text-gray-500 uppercase mb-1 block">Coupon Code</label>
-                  <input
-                    placeholder="e.g. SAVE50"
-                    className="w-full p-3 border rounded-xl font-bold uppercase tracking-widest outline-none focus:ring-2 focus:ring-emerald-200"
-                    value={form.code}
-                    onChange={e => setForm({ ...form, code: e.target.value.toUpperCase() })}
-                    required
-                  />
-                </div>
-                <div>
-                  <label className="text-xs font-bold text-gray-500 uppercase mb-1 block">Discount Amount (₹)</label>
-                  <input
-                    placeholder="e.g. 50"
-                    type="number"
-                    className="w-full p-3 border rounded-xl font-bold outline-none focus:ring-2 focus:ring-emerald-200"
-                    value={form.discountAmount}
-                    onChange={e => setForm({ ...form, discountAmount: e.target.value })}
-                    required
-                  />
-                </div>
-                <button
-                  disabled={loading}
-                  className="w-full bg-emerald-800 text-white py-4 rounded-xl font-bold hover:bg-black transition-all shadow-lg active:scale-95 disabled:opacity-70"
-                >
-                  {loading ? 'Creating...' : 'Create Coupon'}
-                </button>
-              </form>
+          {coupons.length === 0 ? (
+            <div className="bg-white rounded-xl border-2 border-dashed border-gray-200 p-12 text-center">
+              <Ticket size={48} className="mx-auto mb-4 text-gray-300" />
+              <p className="text-gray-500">No coupons created yet</p>
+              <p className="text-sm text-gray-400 mt-2">Create your first discount coupon</p>
             </div>
-
-            <div className="space-y-4">
-              <h2 className="font-bold text-gray-800 mb-2">Active Coupons ({coupons.length})</h2>
-
-              {coupons.length === 0 && (
-                <div className="bg-gray-100 p-8 rounded-2xl text-center text-gray-400">
-                  No active coupons found.
-                </div>
-              )}
-
-              <div className="space-y-3">
-                {coupons.map(c => (
-                  <div
-                    key={c._id}
-                    className="bg-white p-5 rounded-xl border border-gray-100 flex justify-between items-center shadow-sm hover:shadow-md transition-shadow"
-                  >
+          ) : (
+            <div className="space-y-3">
+              {coupons.map((coupon, index) => (
+                <motion.div
+                  key={coupon._id}
+                  initial={{ opacity: 0, x: -20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ delay: index * 0.05 }}
+                  className="bg-white rounded-xl border border-gray-100 shadow-sm p-5 hover:shadow-md transition-all"
+                >
+                  <div className="flex items-center justify-between">
                     <div className="flex items-center gap-4">
-                      <div className="bg-emerald-100 p-3 rounded-xl text-emerald-700">
-                        <TicketPercent size={24} />
+                      <div className="p-3 bg-gradient-to-br from-emerald-500 to-emerald-700 rounded-xl text-white shadow-lg">
+                        <Ticket size={24} />
                       </div>
+
                       <div>
-                        <div className="font-bold text-lg tracking-wider text-gray-900">{c.code}</div>
-                        <div className="text-xs text-green-600 font-bold bg-green-50 px-2 py-0.5 rounded-md w-fit">
-                          FLAT ₹{c.discountAmount} OFF
+                        <div className="flex items-center gap-3 mb-1">
+                          <h3 className="text-2xl font-bold tracking-wider text-gray-900">
+                            {coupon.code}
+                          </h3>
+                          <span className={`px-2 py-1 rounded-lg text-xs font-bold ${
+                            coupon.isActive 
+                              ? 'bg-green-100 text-green-700' 
+                              : 'bg-gray-100 text-gray-600'
+                          }`}>
+                            {coupon.isActive ? 'Active' : 'Inactive'}
+                          </span>
+                        </div>
+
+                        <div className="flex items-center gap-4 text-sm">
+                          <span className="font-bold text-emerald-700 flex items-center gap-1">
+                            <IndianRupee size={14} />
+                            {coupon.discountAmount} OFF
+                          </span>
+                          <span className="text-gray-500">
+                            Used: {coupon.usedCount} times
+                          </span>
+                          <span className="text-gray-400">
+                            {new Date(coupon.createdAt).toLocaleDateString('en-IN', {
+                              day: 'numeric',
+                              month: 'short'
+                            })}
+                          </span>
                         </div>
                       </div>
                     </div>
+
                     <button
-                      onClick={() => handleDelete(c._id)}
-                      className="p-2 text-red-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                      onClick={() => handleDelete(coupon._id)}
+                      className="p-2 text-red-500 hover:bg-red-50 rounded-lg transition-colors"
                     >
                       <Trash2 size={20} />
                     </button>
                   </div>
-                ))}
-              </div>
+                </motion.div>
+              ))}
             </div>
-          </div>
+          )}
         </div>
-      </main>
+      </div>
     </div>
   );
 }

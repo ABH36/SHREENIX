@@ -1,3 +1,4 @@
+// src/models/Product.ts
 export const runtime = "nodejs";
 import mongoose from 'mongoose';
 
@@ -30,6 +31,11 @@ const productSchema = new mongoose.Schema(
           type: String,
           default: '/hero-product.png'
         },
+        // Cloudinary public ID for easy deletion
+        imagePublicId: {
+          type: String,
+          default: null
+        },
         inStock: {
           type: Boolean,
           default: true
@@ -48,15 +54,41 @@ const productSchema = new mongoose.Schema(
       }
     },
 
-    heroImages: {
-      type: [String],
-      default: ['/hero-product.png']
-    },
+    // Hero Images with Cloudinary support
+    heroImages: [
+      {
+        url: {
+          type: String,
+          required: true
+        },
+        publicId: {
+          type: String,
+          default: null
+        },
+        order: {
+          type: Number,
+          default: 0
+        }
+      }
+    ],
 
-    treatmentImages: {
-      type: [String],
-      default: ['/problem-1.png', '/problem-2.png', '/problem-3.png']
-    },
+    // Treatment Images with Cloudinary support
+    treatmentImages: [
+      {
+        url: {
+          type: String,
+          required: true
+        },
+        publicId: {
+          type: String,
+          default: null
+        },
+        order: {
+          type: Number,
+          default: 0
+        }
+      }
+    ],
 
     topBar: {
       text: {
@@ -67,6 +99,22 @@ const productSchema = new mongoose.Schema(
       isActive: {
         type: Boolean,
         default: true
+      }
+    },
+
+    // SEO Fields
+    seo: {
+      metaTitle: {
+        type: String,
+        default: 'Shreenix Ayurveda – Trusted Ayurvedic Fungal Care'
+      },
+      metaDescription: {
+        type: String,
+        default: 'Clinically inspired Ayurvedic cream for fungal infection, itching, rashes & ringworm. Fast relief, safe and natural.'
+      },
+      keywords: {
+        type: [String],
+        default: ['ayurvedic cream', 'fungal infection', 'ringworm treatment']
       }
     }
   },

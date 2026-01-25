@@ -1,302 +1,309 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
+import { motion } from 'framer-motion';
 import {
-  LayoutDashboard, ShoppingBag, Users, LogOut, Settings, MessageSquare, TicketPercent,
-  Search, Bell, ChevronDown, Phone, MapPin, Clock, Download, Menu, X
+  TrendingUp, ShoppingCart, Users, Package, IndianRupee,
+  Clock, CheckCircle, XCircle, Phone, ArrowUpRight, Calendar
 } from 'lucide-react';
-import { useRouter, usePathname } from 'next/navigation';
 
-interface OrderType {
+interface DashboardStats {
+  totalRevenue: number;
+  totalOrders: number;
+  pendingOrders: number;
+  deliveredOrders: number;
+  totalCustomers: number;
+  todayOrders: number;
+  thisWeekRevenue: number;
+  avgOrderValue: number;
+}
+
+interface RecentOrder {
   _id: string;
   customerDetails: {
-    name: string; phone: string; city: string; address: string; pincode: string; state: string;
+    name: string;
+    phone: string;
+    city: string;
   };
-  orderItems: { name: string; qty: number }[];
   totalPrice: number;
   orderStatus: string;
   createdAt: string;
 }
 
-const Dashboard = () => {
-  const router = useRouter();
-  const pathname = usePathname();
-
-  const [orders, setOrders] = useState<OrderType[]>([]);
-  const [filter, setFilter] = useState('');
-  const [stats, setStats] = useState({ revenue: 0, orders: 0, pending: 0 });
-  const [hasNewNotification, setHasNewNotification] = useState(false);
-  const [isMobileNavOpen, setIsMobileNavOpen] = useState(false);
+export default function Dashboard() {
+  const [stats, setStats] = useState<DashboardStats>({
+    totalRevenue: 0,
+    totalOrders: 0,
+    pendingOrders: 0,
+    deliveredOrders: 0,
+    totalCustomers: 0,
+    todayOrders: 0,
+    thisWeekRevenue: 0,
+    avgOrderValue: 0
+  });
+  const [recentOrders, setRecentOrders] = useState<RecentOrder[]>([]);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    fetchOrders();
-    const interval = setInterval(() => { checkForNewOrders(); }, 15000);
-    return () => clearInterval(interval);
+    fetchDashboardData();
   }, []);
 
-  const fetchOrders = async () => {
+  const fetchDashboardData = async () => {
     try {
-      const res = await fetch('/api/admin/orders');
-      const data = await res.json();
-      if (data.success) {
-        setOrders(data.orders);
-        calculateStats(data.orders);
-      }
-    } catch {
-      console.error('Fetch Error');
-    }
-  };
+      const [ordersRes, customersRes] = await Promise.all([
+        fetch('/api/admin/orders'),
+        fetch('/api/admin/customers')
+      ]);
 
-  const checkForNewOrders = async () => {
-    try {
-      const res = await fetch('/api/admin/orders');
-      const data = await res.json();
-      if (data.success) {
-        setOrders(prev => {
-          if (data.orders.length > prev.length) setHasNewNotification(true);
-          return data.orders;
+      const ordersData = await ordersRes.json();
+      const customersData = await customersRes.json();
+
+      if (ordersData.success) {
+        const orders = ordersData.orders;
+
+        // Calculate stats
+        const totalRevenue = orders.reduce((sum: number, o: any) => sum + o.totalPrice, 0);
+        const pending = orders.filter((o: any) => o.orderStatus === 'Processing').length;
+        const delivered = orders.filter((o: any) => o.orderStatus === 'Delivered').length;
+
+        // Today's orders
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        const todayOrders = orders.filter((o: any) => new Date(o.createdAt) >= today).length;
+
+        // This week's revenue
+        const weekAgo = new Date();
+        weekAgo.setDate(weekAgo.getDate() - 7);
+        const thisWeekRevenue = orders
+          .filter((o: any) => new Date(o.createdAt) >= weekAgo)
+          .reduce((sum: number, o: any) => sum + o.totalPrice, 0);
+
+        setStats({
+          totalRevenue,
+          totalOrders: orders.length,
+          pendingOrders: pending,
+          deliveredOrders: delivered,
+          totalCustomers: customersData.success ? customersData.customers.length : 0,
+          todayOrders,
+          thisWeekRevenue,
+          avgOrderValue: orders.length > 0 ? Math.round(totalRevenue / orders.length) : 0
         });
-        calculateStats(data.orders);
+
+        setRecentOrders(orders.slice(0, 5));
       }
-    } catch {
-      console.error('Polling Error');
+    } catch (error) {
+      console.error('Dashboard fetch error:', error);
+    } finally {
+      setLoading(false);
     }
   };
 
-  const calculateStats = (data: OrderType[]) => {
-    const revenue = data.reduce((acc, order) => acc + order.totalPrice, 0);
-    const pending = data.filter(o => o.orderStatus === 'Processing').length;
-    setStats({ revenue, orders: data.length, pending });
-    if (pending > 0) setHasNewNotification(true);
-  };
+  const statCards = [
+    {
+      title: 'Total Revenue',
+      value: `₹${stats.totalRevenue.toLocaleString()}`,
+      icon: IndianRupee,
+      gradient: 'from-emerald-500 to-emerald-700',
+      change: `₹${stats.thisWeekRevenue.toLocaleString()} this week`,
+      changePositive: true
+    },
+    {
+      title: 'Total Orders',
+      value: stats.totalOrders,
+      icon: ShoppingCart,
+      gradient: 'from-blue-500 to-blue-700',
+      change: `${stats.todayOrders} today`,
+      changePositive: true
+    },
+    {
+      title: 'Pending Orders',
+      value: stats.pendingOrders,
+      icon: Clock,
+      gradient: 'from-orange-500 to-orange-700',
+      change: 'Needs action',
+      changePositive: false
+    },
+    {
+      title: 'Total Customers',
+      value: stats.totalCustomers,
+      icon: Users,
+      gradient: 'from-purple-500 to-purple-700',
+      change: `₹${stats.avgOrderValue} avg order`,
+      changePositive: true
+    }
+  ];
 
-  const handleStatusChange = async (orderId: string, newStatus: string) => {
-    setOrders(prev => prev.map(o => o._id === orderId ? { ...o, orderStatus: newStatus } : o));
-    await fetch('/api/admin/update-status', {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ orderId, status: newStatus })
-    });
-    calculateStats(orders);
-  };
-
-  const sendWhatsApp = (phone: string, name: string) => {
-    const msg = `Namaste ${name}, Apka Shreenix order confirm ho gaya hai. Hum jald hi dispatch karenge.`;
-    window.open(`https://wa.me/91${phone}?text=${encodeURIComponent(msg)}`, '_blank');
-  };
-
-  const handleExport = () => {
-    const headers = ['Order Date', 'Customer Name', 'Phone', 'Address', 'City', 'Pincode', 'State', 'Product', 'Amount', 'Status'];
-    const rows = filteredOrders.map(order => [
-      new Date(order.createdAt).toLocaleDateString('en-IN'),
-      `"${order.customerDetails.name}"`, order.customerDetails.phone, `"${order.customerDetails.address}"`,
-      order.customerDetails.city, order.customerDetails.pincode, order.customerDetails.state,
-      `"${order.orderItems.map(i => `${i.name} x${i.qty}`).join(' | ')}"`,
-      order.totalPrice, order.orderStatus
-    ]);
-    const csvContent = [headers.join(','), ...rows.map(e => e.join(','))].join('\n');
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-    const link = document.createElement('a');
-    const url = URL.createObjectURL(blob);
-    link.setAttribute('href', url);
-    link.setAttribute('download', `Shreenix_Orders_${new Date().toISOString().slice(0, 10)}.csv`);
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-  };
-
-  const handleLogout = async () => {
-    try {
-      await fetch('/api/admin/logout', { method: 'POST' });
-      router.replace('/admin/login');
-      router.refresh();
-    } catch {
-      router.replace('/admin/login');
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case 'Delivered': return 'bg-green-100 text-green-700';
+      case 'Shipped': return 'bg-blue-100 text-blue-700';
+      case 'Processing': return 'bg-yellow-100 text-yellow-700';
+      case 'Cancelled': return 'bg-red-100 text-red-700';
+      default: return 'bg-gray-100 text-gray-700';
     }
   };
 
-  const SidebarContent = () => (
-    <div className="flex flex-col h-full justify-between">
-      <div>
-        <div className="h-20 flex items-center px-8 border-b border-gray-100">
-          <h1 className="text-2xl font-serif font-bold text-emerald-900 tracking-tight">
-            Shreenix<span className="text-emerald-500">.</span>
-          </h1>
-        </div>
-        <nav className="p-4 space-y-2">
-          {[
-            { icon: LayoutDashboard, label: 'Dashboard', path: '/admin/dashboard' },
-            { icon: ShoppingBag, label: 'Products (Price)', path: '/admin/products' },
-            { icon: Users, label: 'Customers', path: '/admin/customers' },
-            { icon: MessageSquare, label: 'Manage Reviews', path: '/admin/reviews' },
-            { icon: TicketPercent, label: 'Coupons', path: '/admin/coupons' },
-            { icon: Settings, label: 'Website Settings', path: '/admin/settings' }
-          ].map(item => (
-            <button
-              key={item.path}
-              onClick={() => { router.push(item.path); setIsMobileNavOpen(false); }}
-              className={`flex items-center gap-3 w-full px-4 py-3 rounded-xl font-medium transition-all ${
-                pathname === item.path ? 'bg-emerald-50 text-emerald-700' : 'text-gray-500 hover:bg-gray-50'
-              }`}
-            >
-              <item.icon size={20} /> {item.label}
-            </button>
-          ))}
-        </nav>
-      </div>
-      <div className="p-4 border-t border-gray-100">
-        <button
-          onClick={handleLogout}
-          className="flex items-center gap-3 w-full px-4 py-3 text-red-500 hover:bg-red-50 rounded-xl font-medium transition-all"
-        >
-          <LogOut size={20} /> Logout
-        </button>
-      </div>
-    </div>
-  );
+  const getStatusIcon = (status: string) => {
+    switch (status) {
+      case 'Delivered': return CheckCircle;
+      case 'Cancelled': return XCircle;
+      default: return Clock;
+    }
+  };
 
-  const filteredOrders = orders.filter(o =>
-    o.customerDetails.name.toLowerCase().includes(filter.toLowerCase()) ||
-    o.customerDetails.phone.includes(filter)
-  );
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-96">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-emerald-600"></div>
+      </div>
+    );
+  }
 
   return (
-    <div className="flex h-screen bg-[#F3F4F6] font-sans overflow-hidden">
-      <aside className="w-64 bg-white border-r border-gray-200 hidden md:flex flex-col">
-        <SidebarContent />
-      </aside>
+    <div className="space-y-6">
+      {/* Header */}
+      <div>
+        <h1 className="text-3xl font-bold text-gray-900">Dashboard</h1>
+        <p className="text-gray-500 mt-1">Welcome back! Here's what's happening today.</p>
+      </div>
 
-      {isMobileNavOpen && (
-        <div className="fixed inset-0 z-50 md:hidden flex">
-          <div className="fixed inset-0 bg-black/50 backdrop-blur-sm" onClick={() => setIsMobileNavOpen(false)} />
-          <div className="relative w-3/4 max-w-xs bg-white h-full shadow-2xl flex flex-col">
-            <button onClick={() => setIsMobileNavOpen(false)} className="absolute top-4 right-4 p-2 bg-gray-100 rounded-full">
-              <X size={20} />
-            </button>
-            <SidebarContent />
-          </div>
-        </div>
-      )}
-
-      <main className="flex-1 flex flex-col h-full overflow-hidden">
-        <header className="h-16 md:h-20 bg-white/80 backdrop-blur-md border-b border-gray-200 px-4 md:px-8 flex items-center justify-between shrink-0">
-          <div className="flex items-center gap-3">
-            <button onClick={() => setIsMobileNavOpen(true)} className="md:hidden p-2 bg-gray-100 rounded-lg">
-              <Menu size={20} className="text-gray-700" />
-            </button>
-            <h2 className="text-lg md:text-xl font-bold text-gray-800">Overview</h2>
-          </div>
-
-          <div className="flex items-center gap-3">
-            <div className="relative hidden md:block">
-              <Search className="absolute left-3 top-2.5 h-4 w-4 text-gray-400" />
-              <input
-                type="text"
-                placeholder="Search orders..."
-                value={filter}
-                onChange={e => setFilter(e.target.value)}
-                className="pl-10 pr-4 py-2 bg-gray-100 border-none rounded-full text-sm font-bold text-black placeholder-gray-500 outline-none w-64"
-              />
-            </div>
-
-            <button className="p-2 bg-gray-100 rounded-full relative" onClick={() => setHasNewNotification(false)}>
-              <Bell size={20} className={hasNewNotification ? 'text-emerald-600' : 'text-gray-600'} />
-              {hasNewNotification && <span className="absolute top-1 right-1 w-3 h-3 bg-red-500 rounded-full animate-pulse" />}
-            </button>
-          </div>
-        </header>
-
-        <div className="flex-1 overflow-y-auto p-4 md:p-8">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-6 mb-6">
-            <div className="bg-gradient-to-br from-emerald-600 to-emerald-800 p-6 rounded-2xl text-white shadow-lg">
-              <p className="text-emerald-100 text-sm font-medium mb-1">Revenue</p>
-              <h3 className="text-2xl md:text-3xl font-bold">₹{stats.revenue.toLocaleString()}</h3>
-            </div>
-            <div className="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm">
-              <p className="text-gray-400 text-sm font-medium mb-1">Orders</p>
-              <h3 className="text-2xl md:text-3xl font-bold text-gray-800">{stats.orders}</h3>
-            </div>
-            <div className="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm relative overflow-hidden">
-              <p className="text-gray-400 text-sm font-medium mb-1">Pending</p>
-              <h3 className="text-2xl md:text-3xl font-bold text-amber-500">{stats.pending}</h3>
-              <Clock className="absolute right-4 top-4 text-amber-100" size={24} />
-            </div>
-          </div>
-
-          <div className="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden flex flex-col">
-            <div className="px-4 md:px-6 py-4 border-b border-gray-100 flex flex-col md:flex-row justify-between items-start md:items-center gap-3 bg-gray-50/50">
-              <h3 className="font-bold text-gray-800 flex items-center gap-2">
-                Recent Orders <span className="text-xs bg-gray-200 text-gray-600 px-2 py-0.5 rounded-full">{filteredOrders.length}</span>
-              </h3>
-              <div className="flex gap-2 w-full md:w-auto">
-                <button onClick={handleExport} className="flex-1 md:flex-none flex items-center justify-center gap-2 px-3 py-2 bg-white border border-gray-200 text-emerald-700 font-bold text-xs md:text-sm rounded-lg shadow-sm">
-                  <Download size={14} /> Export CSV
-                </button>
-                <button onClick={fetchOrders} className="text-xs md:text-sm text-gray-500 font-medium underline">Refresh</button>
+      {/* Stats Grid */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        {statCards.map((stat, index) => {
+          const Icon = stat.icon;
+          return (
+            <motion.div
+              key={index}
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: index * 0.1 }}
+              className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden group hover:shadow-lg transition-shadow"
+            >
+              <div className={`h-2 bg-gradient-to-r ${stat.gradient}`} />
+              <div className="p-6">
+                <div className="flex items-center justify-between mb-4">
+                  <div className={`p-3 rounded-lg bg-gradient-to-r ${stat.gradient} text-white`}>
+                    <Icon size={24} />
+                  </div>
+                  <ArrowUpRight className="text-gray-400 group-hover:text-emerald-600 transition-colors" size={20} />
+                </div>
+                <div className="mb-2">
+                  <p className="text-sm text-gray-600 font-medium">{stat.title}</p>
+                  <p className="text-3xl font-bold text-gray-900 mt-1">{stat.value}</p>
+                </div>
+                <div className="flex items-center gap-1 text-sm">
+                  <span className={stat.changePositive ? 'text-green-600' : 'text-orange-600'}>
+                    {stat.change}
+                  </span>
+                </div>
               </div>
-            </div>
+            </motion.div>
+          );
+        })}
+      </div>
 
-            <div className="overflow-x-auto">
-              <table className="w-full text-left min-w-[600px]">
-                <thead className="bg-gray-50 text-gray-500 text-xs uppercase font-semibold">
-                  <tr>
-                    <th className="px-6 py-4">Customer</th>
-                    <th className="px-6 py-4">Status</th>
-                    <th className="px-6 py-4 text-right">Action</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-gray-100 text-sm">
-                  {filteredOrders.map(order => (
-                    <tr key={order._id} className="hover:bg-gray-50/50">
-                      <td className="px-6 py-4">
-                        <div className="font-bold text-gray-900">{order.customerDetails.name}</div>
-                        <div className="text-xs text-gray-500 flex items-center gap-1"><Phone size={10} /> {order.customerDetails.phone}</div>
-                        <div className="text-xs text-gray-400 mt-1 flex items-center gap-1"><MapPin size={10} /> {order.customerDetails.city}, {order.customerDetails.pincode}</div>
-                        <div className="text-xs font-bold text-emerald-700 mt-1">₹{order.totalPrice}</div>
-                      </td>
-                      <td className="px-6 py-4">
-                        <div className="relative inline-block w-32">
-                          <select
-                            value={order.orderStatus}
-                            onChange={e => handleStatusChange(order._id, e.target.value)}
-                            className={`w-full appearance-none px-3 py-1.5 rounded-lg text-xs font-bold border-none cursor-pointer ${
-                              order.orderStatus === 'Delivered' ? 'bg-green-100 text-green-700' :
-                              order.orderStatus === 'Shipped' ? 'bg-blue-100 text-blue-700' :
-                              order.orderStatus === 'Cancelled' ? 'bg-red-100 text-red-700' :
-                              'bg-yellow-100 text-yellow-700'
-                            }`}
-                          >
-                            <option value="Processing">Processing</option>
-                            <option value="Shipped">Shipped</option>
-                            <option value="Delivered">Delivered</option>
-                            <option value="Cancelled">Cancelled</option>
-                          </select>
-                          <ChevronDown className="absolute right-2 top-2 h-3 w-3 opacity-50 pointer-events-none" />
-                        </div>
-                      </td>
-                      <td className="px-6 py-4 text-right">
-                        <button
-                          onClick={() => sendWhatsApp(order.customerDetails.phone, order.customerDetails.name)}
-                          className="p-2 text-green-600 bg-green-50 rounded-lg shadow-sm"
-                        >
-                          <Phone size={16} />
-                        </button>
-                      </td>
-                    </tr>
-                  ))}
-                  {filteredOrders.length === 0 && (
-                    <tr>
-                      <td colSpan={3} className="text-center py-8 text-gray-400">No orders found.</td>
-                    </tr>
-                  )}
-                </tbody>
-              </table>
-            </div>
+      {/* Recent Orders */}
+      <div className="bg-white rounded-xl shadow-sm border border-gray-100">
+        <div className="px-6 py-4 border-b border-gray-100 flex items-center justify-between">
+          <div>
+            <h2 className="text-lg font-bold text-gray-900">Recent Orders</h2>
+            <p className="text-sm text-gray-500">Latest 5 orders</p>
           </div>
+          <a
+            href="/admin/orders"
+            className="text-sm font-medium text-emerald-600 hover:text-emerald-700 flex items-center gap-1"
+          >
+            View All <ArrowUpRight size={16} />
+          </a>
         </div>
-      </main>
+
+        <div className="divide-y divide-gray-100">
+          {recentOrders.length === 0 ? (
+            <div className="p-12 text-center text-gray-400">
+              <Package size={48} className="mx-auto mb-4 opacity-30" />
+              <p>No orders yet</p>
+            </div>
+          ) : (
+            recentOrders.map((order, index) => {
+              const StatusIcon = getStatusIcon(order.orderStatus);
+              return (
+                <motion.div
+                  key={order._id}
+                  initial={{ opacity: 0, x: -20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ delay: index * 0.05 }}
+                  className="p-6 hover:bg-gray-50 transition-colors"
+                >
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-4">
+                      <div className="w-12 h-12 bg-emerald-100 rounded-full flex items-center justify-center text-emerald-700 font-bold">
+                        {order.customerDetails.name.charAt(0).toUpperCase()}
+                      </div>
+                      <div>
+                        <p className="font-semibold text-gray-900">{order.customerDetails.name}</p>
+                        <div className="flex items-center gap-3 mt-1">
+                          <span className="text-sm text-gray-500 flex items-center gap-1">
+                            <Phone size={12} />
+                            {order.customerDetails.phone}
+                          </span>
+                          <span className="text-sm text-gray-500 flex items-center gap-1">
+                            <Calendar size={12} />
+                            {new Date(order.createdAt).toLocaleDateString('en-IN')}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center gap-4">
+                      <div className="text-right">
+                        <p className="text-lg font-bold text-emerald-700">₹{order.totalPrice.toLocaleString()}</p>
+                        <p className="text-xs text-gray-500">{order.customerDetails.city}</p>
+                      </div>
+                      <div className={`px-3 py-1.5 rounded-lg text-sm font-semibold flex items-center gap-2 ${getStatusColor(order.orderStatus)}`}>
+                        <StatusIcon size={14} />
+                        {order.orderStatus}
+                      </div>
+                    </div>
+                  </div>
+                </motion.div>
+              );
+            })
+          )}
+        </div>
+      </div>
+
+      {/* Quick Stats */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <div className="bg-gradient-to-br from-emerald-500 to-emerald-700 rounded-xl p-6 text-white">
+          <TrendingUp className="mb-4" size={32} />
+          <p className="text-emerald-100 text-sm mb-1">Delivered Orders</p>
+          <p className="text-4xl font-bold">{stats.deliveredOrders}</p>
+          <p className="text-emerald-200 text-sm mt-2">
+            {stats.totalOrders > 0 
+              ? `${Math.round((stats.deliveredOrders / stats.totalOrders) * 100)}% completion rate`
+              : 'No orders yet'
+            }
+          </p>
+        </div>
+
+        <div className="bg-white rounded-xl p-6 border border-gray-200 shadow-sm">
+          <Package className="mb-4 text-blue-600" size={32} />
+          <p className="text-gray-600 text-sm mb-1">Average Order Value</p>
+          <p className="text-4xl font-bold text-gray-900">₹{stats.avgOrderValue}</p>
+          <p className="text-gray-500 text-sm mt-2">Per transaction</p>
+        </div>
+
+        <div className="bg-white rounded-xl p-6 border border-gray-200 shadow-sm">
+          <Users className="mb-4 text-purple-600" size={32} />
+          <p className="text-gray-600 text-sm mb-1">Repeat Customers</p>
+          <p className="text-4xl font-bold text-gray-900">
+            {stats.totalCustomers > 0 
+              ? Math.round((stats.totalCustomers / stats.totalOrders) * 100)
+              : 0}%
+          </p>
+          <p className="text-gray-500 text-sm mt-2">Customer retention</p>
+        </div>
+      </div>
     </div>
   );
-};
-
-export default Dashboard;
+}

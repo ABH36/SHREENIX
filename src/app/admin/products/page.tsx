@@ -1,262 +1,450 @@
+// src/app/admin/products/page.tsx
 'use client';
 
 import React, { useEffect, useState } from 'react';
 import {
-  Save, Loader2, ArrowLeft, Plus, Trash2, MapPin, Image as ImageIcon,
-  LayoutDashboard, ShoppingBag, Users, LogOut, Settings, MessageSquare, TicketPercent, Menu, X
+  Save, Loader2, Plus, Trash2, MapPin, Image as ImageIcon,
+  Package, DollarSign, AlertCircle, CheckCircle
 } from 'lucide-react';
-import { useRouter, usePathname } from 'next/navigation';
+import ImageUpload from '../../admin/ImageUpload';
 
-const ProductPage = () => {
-  const router = useRouter();
-  const pathname = usePathname();
+interface Variant {
+  weight: string;
+  price: number;
+  mrp: number;
+  image: string;
+  imagePublicId?: string;
+  inStock: boolean;
+}
 
+interface ImageData {
+  url: string;
+  publicId?: string;
+  order: number;
+}
+
+interface ProductData {
+  name: string;
+  variants: Variant[];
+  deliveryRules: {
+    allowedStates: string[];
+    allowedPincodes: string[];
+  };
+  heroImages: ImageData[];
+  treatmentImages: ImageData[];
+  topBar: {
+    text: string;
+    isActive: boolean;
+  };
+  seo?: {
+    metaTitle: string;
+    metaDescription: string;
+    keywords: string[];
+  };
+}
+
+export default function ProductPage() {
   const [loading, setLoading] = useState(false);
-  const [isMobileNavOpen, setIsMobileNavOpen] = useState(false);
-
-  const [data, setData] = useState<any>({
+  const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'success' | 'error'>('idle');
+  const [data, setData] = useState<ProductData>({
+    name: '',
     variants: [],
     deliveryRules: { allowedStates: [], allowedPincodes: [] },
     heroImages: [],
-    treatmentImages: []
+    treatmentImages: [],
+    topBar: { text: '', isActive: true },
+    seo: {
+      metaTitle: '',
+      metaDescription: '',
+      keywords: []
+    }
   });
 
   useEffect(() => {
-    fetch('/api/admin/product')
-      .then(res => res.json())
-      .then(res => {
-        if (res.success && res.product) {
-          setData({
-            ...res.product,
-            variants: res.product.variants || [],
-            deliveryRules: res.product.deliveryRules || { allowedStates: [], allowedPincodes: [] },
-            heroImages: res.product.heroImages || [],
-            treatmentImages: res.product.treatmentImages || []
-          });
-        }
-      })
-      .catch(() => console.log('Fetch error'));
+    fetchProduct();
   }, []);
 
-  const handleSave = async () => {
-    setLoading(true);
-    await fetch('/api/admin/product', {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(data)
-    });
-    setLoading(false);
-    alert('Settings Updated Successfully!');
-  };
-
-  const handleLogout = async () => {
+  const fetchProduct = async () => {
     try {
-      await fetch('/api/admin/logout', { method: 'POST' });
-      router.replace('/admin/login');
-      router.refresh();
-    } catch {
-      router.replace('/admin/login');
+      const res = await fetch('/api/admin/product');
+      const result = await res.json();
+      if (result.success && result.product) {
+        setData(result.product);
+      }
+    } catch (error) {
+      console.error('Fetch error:', error);
     }
   };
 
-  const handleArrayChange = (key: string, index: number, val: string) => {
-    const list = data[key] ? [...data[key]] : [];
-    list[index] = val;
-    setData({ ...data, [key]: list });
+  const handleSave = async () => {
+    setSaveStatus('saving');
+    setLoading(true);
+
+    try {
+      const res = await fetch('/api/admin/product', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data)
+      });
+
+      const result = await res.json();
+
+      if (result.success) {
+        setSaveStatus('success');
+        setTimeout(() => setSaveStatus('idle'), 3000);
+      } else {
+        setSaveStatus('error');
+        alert(result.error || 'Failed to save');
+      }
+    } catch (error) {
+      console.error('Save error:', error);
+      setSaveStatus('error');
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const updateVariant = (index: number, field: string, val: any) => {
-    const vars = [...(data.variants || [])];
-    vars[index] = { ...vars[index], [field]: val };
-    setData({ ...data, variants: vars });
+  const updateVariant = (index: number, field: keyof Variant, value: any) => {
+    const newVariants = [...data.variants];
+    newVariants[index] = { ...newVariants[index], [field]: value };
+    setData({ ...data, variants: newVariants });
   };
 
   const addVariant = () => {
     setData({
       ...data,
-      variants: [...(data.variants || []), { weight: 'New Size', price: 0, mrp: 0, inStock: true }]
+      variants: [
+        ...data.variants,
+        { weight: 'New Size', price: 0, mrp: 0, image: '', inStock: true }
+      ]
     });
   };
 
   const removeVariant = (index: number) => {
-    const vars = (data.variants || []).filter((_: any, i: number) => i !== index);
-    setData({ ...data, variants: vars });
+    const newVariants = data.variants.filter((_, i) => i !== index);
+    setData({ ...data, variants: newVariants });
   };
 
-  const addImageSlot = (key: string) => setData({ ...data, [key]: [...(data[key] || []), ''] });
-
-  const removeImageSlot = (key: string, index: number) => {
-    const list = (data[key] || []).filter((_: any, i: number) => i !== index);
-    setData({ ...data, [key]: list });
+  const handleHeroImagesUpdate = (urls: string[]) => {
+    const newImages = urls.map((url, index) => ({
+      url,
+      publicId: '', // Will be populated by upload component
+      order: index
+    }));
+    setData({ ...data, heroImages: newImages });
   };
 
-  const SidebarContent = () => (
-    <div className="flex flex-col h-full justify-between">
-      <div>
-        <div className="h-20 flex items-center px-8 border-b border-gray-100">
-          <h1 className="text-2xl font-serif font-bold text-emerald-900 tracking-tight">
-            Shreenix<span className="text-emerald-500">.</span>
-          </h1>
+  const handleTreatmentImagesUpdate = (urls: string[]) => {
+    const newImages = urls.map((url, index) => ({
+      url,
+      publicId: '',
+      order: index
+    }));
+    setData({ ...data, treatmentImages: newImages });
+  };
+
+  return (
+    <div className="space-y-6">
+      {/* Header with Save Button */}
+      <div className="flex items-center justify-between bg-white p-4 rounded-xl shadow-sm border border-gray-100">
+        <div>
+          <h1 className="text-2xl font-bold text-gray-900">Product Management</h1>
+          <p className="text-sm text-gray-500 mt-1">
+            Manage your product variants, images, and delivery settings
+          </p>
         </div>
-        <nav className="p-4 space-y-2">
-          {[
-            { icon: LayoutDashboard, label: 'Dashboard', path: '/admin/dashboard' },
-            { icon: ShoppingBag, label: 'Products (Price)', path: '/admin/products' },
-            { icon: Users, label: 'Customers', path: '/admin/customers' },
-            { icon: MessageSquare, label: 'Manage Reviews', path: '/admin/reviews' },
-            { icon: TicketPercent, label: 'Coupons', path: '/admin/coupons' },
-            { icon: Settings, label: 'Website Settings', path: '/admin/settings' }
-          ].map(item => (
-            <button
-              key={item.path}
-              onClick={() => { router.push(item.path); setIsMobileNavOpen(false); }}
-              className={`flex items-center gap-3 w-full px-4 py-3 rounded-xl font-medium transition-all ${
-                pathname === item.path ? 'bg-emerald-50 text-emerald-700' : 'text-gray-500 hover:bg-gray-50'
-              }`}
-            >
-              <item.icon size={20} /> {item.label}
-            </button>
-          ))}
-        </nav>
-      </div>
-      <div className="p-4 border-t border-gray-100">
         <button
-          onClick={handleLogout}
-          className="flex items-center gap-3 w-full px-4 py-3 text-red-500 hover:bg-red-50 rounded-xl font-medium transition-all"
+          onClick={handleSave}
+          disabled={loading}
+          className={`
+            px-6 py-3 rounded-lg font-semibold text-white
+            flex items-center gap-2 transition-all shadow-lg
+            ${loading ? 'bg-gray-400 cursor-not-allowed' : 'bg-emerald-600 hover:bg-emerald-700'}
+            ${saveStatus === 'success' ? 'bg-green-500' : ''}
+            ${saveStatus === 'error' ? 'bg-red-500' : ''}
+          `}
         >
-          <LogOut size={20} /> Logout
+          {loading ? (
+            <>
+              <Loader2 className="animate-spin" size={20} />
+              Saving...
+            </>
+          ) : saveStatus === 'success' ? (
+            <>
+              <CheckCircle size={20} />
+              Saved!
+            </>
+          ) : (
+            <>
+              <Save size={20} />
+              Save Changes
+            </>
+          )}
+        </button>
+      </div>
+
+      {/* Product Variants Section */}
+      <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
+        <div className="flex items-center justify-between mb-6">
+          <div className="flex items-center gap-3">
+            <div className="p-2 bg-emerald-100 rounded-lg">
+              <Package className="text-emerald-700" size={24} />
+            </div>
+            <div>
+              <h2 className="text-xl font-bold text-gray-900">Product Variants</h2>
+              <p className="text-sm text-gray-500">Add different sizes and pricing options</p>
+            </div>
+          </div>
+          <button
+            onClick={addVariant}
+            className="flex items-center gap-2 px-4 py-2 bg-emerald-50 text-emerald-700 rounded-lg hover:bg-emerald-100 transition-colors font-semibold"
+          >
+            <Plus size={20} />
+            Add Variant
+          </button>
+        </div>
+
+        {data.variants.length === 0 ? (
+          <div className="text-center py-12 border-2 border-dashed border-gray-200 rounded-xl">
+            <Package className="mx-auto mb-4 text-gray-400" size={48} />
+            <p className="text-gray-600 mb-2">No variants added yet</p>
+            <p className="text-sm text-gray-400">Click "Add Variant" to create your first product variant</p>
+          </div>
+        ) : (
+          <div className="space-y-4">
+            {data.variants.map((variant, index) => (
+              <div
+                key={index}
+                className="grid grid-cols-1 md:grid-cols-4 gap-4 p-4 bg-gray-50 rounded-xl border border-gray-200 relative"
+              >
+                {/* Weight */}
+                <div>
+                  <label className="block text-xs font-semibold text-gray-600 mb-2">
+                    Weight/Size
+                  </label>
+                  <input
+                    type="text"
+                    value={variant.weight}
+                    onChange={(e) => updateVariant(index, 'weight', e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
+                    placeholder="e.g., 50g"
+                  />
+                </div>
+
+                {/* Price */}
+                <div>
+                  <label className="block text-xs font-semibold text-gray-600 mb-2">
+                    Selling Price (₹)
+                  </label>
+                  <div className="relative">
+                    <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={16} />
+                    <input
+                      type="number"
+                      value={variant.price}
+                      onChange={(e) => updateVariant(index, 'price', Number(e.target.value))}
+                      className="w-full pl-8 pr-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
+                      placeholder="499"
+                    />
+                  </div>
+                </div>
+
+                {/* MRP */}
+                <div>
+                  <label className="block text-xs font-semibold text-gray-600 mb-2">
+                    MRP (₹)
+                  </label>
+                  <div className="relative">
+                    <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={16} />
+                    <input
+                      type="number"
+                      value={variant.mrp}
+                      onChange={(e) => updateVariant(index, 'mrp', Number(e.target.value))}
+                      className="w-full pl-8 pr-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
+                      placeholder="999"
+                    />
+                  </div>
+                </div>
+
+                {/* Stock Status */}
+                <div className="flex items-end">
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={variant.inStock}
+                      onChange={(e) => updateVariant(index, 'inStock', e.target.checked)}
+                      className="w-4 h-4 text-emerald-600 rounded focus:ring-emerald-500"
+                    />
+                    <span className="text-sm font-medium text-gray-700">In Stock</span>
+                  </label>
+                </div>
+
+                {/* Remove Button */}
+                <button
+                  onClick={() => removeVariant(index)}
+                  className="absolute top-2 right-2 p-2 text-red-500 hover:bg-red-50 rounded-lg transition-colors"
+                  title="Remove variant"
+                >
+                  <Trash2 size={18} />
+                </button>
+
+                {/* Discount Badge */}
+                {variant.mrp > variant.price && (
+                  <div className="absolute top-2 left-2 px-2 py-1 bg-emerald-500 text-white text-xs font-bold rounded">
+                    {Math.round(((variant.mrp - variant.price) / variant.mrp) * 100)}% OFF
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* Hero Images Section */}
+      <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
+        <div className="flex items-center gap-3 mb-6">
+          <div className="p-2 bg-blue-100 rounded-lg">
+            <ImageIcon className="text-blue-700" size={24} />
+          </div>
+          <div>
+            <h2 className="text-xl font-bold text-gray-900">Hero Slider Images</h2>
+            <p className="text-sm text-gray-500">Main product images for homepage slider</p>
+          </div>
+        </div>
+
+        <ImageUpload
+          folder="shreenix/hero"
+          maxFiles={5}
+          currentImages={data.heroImages.map(img => img.url)}
+          onUploadComplete={handleHeroImagesUpdate}
+        />
+      </div>
+
+      {/* Treatment Images Section */}
+      <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
+        <div className="flex items-center gap-3 mb-6">
+          <div className="p-2 bg-purple-100 rounded-lg">
+            <ImageIcon className="text-purple-700" size={24} />
+          </div>
+          <div>
+            <h2 className="text-xl font-bold text-gray-900">Treatment Images</h2>
+            <p className="text-sm text-gray-500">Before/After or product usage images</p>
+          </div>
+        </div>
+
+        <ImageUpload
+          folder="shreenix/treatment"
+          maxFiles={10}
+          currentImages={data.treatmentImages.map(img => img.url)}
+          onUploadComplete={handleTreatmentImagesUpdate}
+        />
+      </div>
+
+      {/* Delivery Settings */}
+      <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
+        <div className="flex items-center gap-3 mb-6">
+          <div className="p-2 bg-emerald-100 rounded-lg">
+            <MapPin className="text-emerald-700" size={24} />
+          </div>
+          <div>
+            <h2 className="text-xl font-bold text-gray-900">Delivery Zones</h2>
+            <p className="text-sm text-gray-500">Manage serviceable pincodes</p>
+          </div>
+        </div>
+
+        <div className="space-y-4">
+          <div>
+            <label className="block text-sm font-semibold text-gray-700 mb-2">
+              Allowed Pincodes (Comma Separated)
+            </label>
+            <textarea
+              value={data.deliveryRules.allowedPincodes.join(', ')}
+              onChange={(e) =>
+                setData({
+                  ...data,
+                  deliveryRules: {
+                    ...data.deliveryRules,
+                    allowedPincodes: e.target.value.split(',').map(s => s.trim()).filter(Boolean)
+                  }
+                })
+              }
+              rows={4}
+              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent font-mono text-sm"
+              placeholder="452001, 452002, 452003..."
+            />
+            <p className="text-xs text-gray-500 mt-2">
+              <AlertCircle className="inline mr-1" size={14} />
+              Enter pincodes separated by commas. Leave empty to allow all pincodes.
+            </p>
+          </div>
+        </div>
+      </div>
+
+      {/* SEO Settings */}
+      <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
+        <div className="mb-6">
+          <h2 className="text-xl font-bold text-gray-900">SEO Settings</h2>
+          <p className="text-sm text-gray-500">Optimize for search engines</p>
+        </div>
+
+        <div className="space-y-4">
+          <div>
+            <label className="block text-sm font-semibold text-gray-700 mb-2">
+              Meta Title
+            </label>
+            <input
+              type="text"
+              value={data.seo?.metaTitle || ''}
+              onChange={(e) =>
+                setData({
+                  ...data,
+                  seo: { ...data.seo!, metaTitle: e.target.value }
+                })
+              }
+              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
+              placeholder="Shreenix Ayurveda – Trusted Ayurvedic Fungal Care"
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-semibold text-gray-700 mb-2">
+              Meta Description
+            </label>
+            <textarea
+              value={data.seo?.metaDescription || ''}
+              onChange={(e) =>
+                setData({
+                  ...data,
+                  seo: { ...data.seo!, metaDescription: e.target.value }
+                })
+              }
+              rows={3}
+              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
+              placeholder="Clinically inspired Ayurvedic cream for fungal infection..."
+            />
+          </div>
+        </div>
+      </div>
+
+      {/* Save Button (Mobile) */}
+      <div className="md:hidden">
+        <button
+          onClick={handleSave}
+          disabled={loading}
+          className="w-full px-6 py-4 bg-emerald-600 text-white rounded-xl font-bold text-lg shadow-xl hover:bg-emerald-700 disabled:bg-gray-400 flex items-center justify-center gap-2"
+        >
+          {loading ? (
+            <>
+              <Loader2 className="animate-spin" size={24} />
+              Saving...
+            </>
+          ) : (
+            <>
+              <Save size={24} />
+              Save All Changes
+            </>
+          )}
         </button>
       </div>
     </div>
   );
-
-  return (
-    <div className="flex h-screen bg-[#F3F4F6] font-sans overflow-hidden">
-      <aside className="w-64 bg-white border-r border-gray-200 hidden md:flex flex-col">
-        <SidebarContent />
-      </aside>
-
-      {isMobileNavOpen && (
-        <div className="fixed inset-0 z-50 md:hidden flex">
-          <div className="fixed inset-0 bg-black/50 backdrop-blur-sm" onClick={() => setIsMobileNavOpen(false)} />
-          <div className="relative w-3/4 max-w-xs bg-white h-full shadow-2xl flex flex-col">
-            <button onClick={() => setIsMobileNavOpen(false)} className="absolute top-4 right-4 p-2 bg-gray-100 rounded-full">
-              <X size={20} />
-            </button>
-            <SidebarContent />
-          </div>
-        </div>
-      )}
-
-      <main className="flex-1 flex flex-col h-full overflow-hidden">
-        <header className="h-16 md:h-20 bg-white/80 backdrop-blur-md border-b border-gray-200 px-4 md:px-8 flex items-center justify-between shrink-0">
-          <div className="flex items-center gap-3">
-            <button onClick={() => setIsMobileNavOpen(true)} className="md:hidden p-2 bg-gray-100 rounded-lg">
-              <Menu size={20} className="text-gray-700" />
-            </button>
-            <h1 className="text-lg md:text-xl font-bold text-gray-800">Product Settings</h1>
-          </div>
-          <button
-            onClick={handleSave}
-            disabled={loading}
-            className="bg-emerald-800 text-white px-4 py-2 rounded-lg font-bold text-sm shadow-lg hover:bg-black transition-all flex items-center gap-2"
-          >
-            {loading ? <Loader2 className="animate-spin" size={16} /> : (<><Save size={16} /> Save Changes</>)}
-          </button>
-        </header>
-
-        <div className="flex-1 overflow-y-auto p-4 md:p-8">
-          <div className="max-w-4xl mx-auto space-y-6 md:space-y-8 pb-20">
-            <div className="bg-white p-4 md:p-6 rounded-2xl shadow-sm">
-              <h2 className="text-lg font-bold text-gray-800 mb-4 flex items-center gap-2">
-                <Plus size={20} className="text-emerald-600" /> Product Variants
-              </h2>
-
-              {(data.variants || []).map((v: any, i: number) => (
-                <div key={i} className="flex flex-col md:flex-row gap-4 items-end mb-4 p-4 bg-gray-50 rounded-xl border border-gray-200 relative">
-                  <div className="w-full md:w-1/4">
-                    <label className="text-xs font-bold text-gray-500">Weight/Size</label>
-                    <input type="text" value={v.weight} onChange={e => updateVariant(i, 'weight', e.target.value)} className="w-full p-2 border rounded-lg font-bold" />
-                  </div>
-                  <div className="w-full md:w-1/4">
-                    <label className="text-xs font-bold text-gray-500">Price (₹)</label>
-                    <input type="number" value={v.price} onChange={e => updateVariant(i, 'price', Number(e.target.value))} className="w-full p-2 border rounded-lg text-emerald-700 font-bold" />
-                  </div>
-                  <div className="w-full md:w-1/4">
-                    <label className="text-xs font-bold text-gray-500">MRP (₹)</label>
-                    <input type="number" value={v.mrp} onChange={e => updateVariant(i, 'mrp', Number(e.target.value))} className="w-full p-2 border rounded-lg text-gray-400 line-through" />
-                  </div>
-                  <button onClick={() => removeVariant(i)} className="absolute top-2 right-2 md:relative md:top-auto md:right-auto p-2 text-red-500 hover:bg-red-100 rounded-lg">
-                    <Trash2 size={20} />
-                  </button>
-                </div>
-              ))}
-              <button onClick={addVariant} className="text-sm font-bold text-emerald-700 hover:underline">+ Add Another Size</button>
-            </div>
-
-            <div className="bg-white p-4 md:p-6 rounded-2xl shadow-sm">
-              <h2 className="text-lg font-bold text-gray-800 mb-4 flex items-center gap-2">
-                <ImageIcon size={20} className="text-blue-600" /> Website Images
-              </h2>
-
-              <div className="mb-6">
-                <label className="text-sm font-bold text-gray-600 block mb-2">Hero Slider Images</label>
-                {(data.heroImages || []).map((url: string, i: number) => (
-                  <div key={i} className="flex gap-2 mb-2">
-                    <input type="text" value={url} onChange={e => handleArrayChange('heroImages', i, e.target.value)} className="w-full p-2 border rounded-lg text-xs" />
-                    <button onClick={() => removeImageSlot('heroImages', i)} className="text-red-400"><Trash2 size={16} /></button>
-                  </div>
-                ))}
-                <button onClick={() => addImageSlot('heroImages')} className="text-xs text-blue-600 font-bold">+ Add Image URL</button>
-              </div>
-
-              <div>
-                <label className="text-sm font-bold text-gray-600 block mb-2">Treatment Images</label>
-                {(data.treatmentImages || []).map((url: string, i: number) => (
-                  <div key={i} className="flex gap-2 mb-2">
-                    <input type="text" value={url} onChange={e => handleArrayChange('treatmentImages', i, e.target.value)} className="w-full p-2 border rounded-lg text-xs" />
-                    <button onClick={() => removeImageSlot('treatmentImages', i)} className="text-red-400"><Trash2 size={16} /></button>
-                  </div>
-                ))}
-                <button onClick={() => addImageSlot('treatmentImages')} className="text-xs text-blue-600 font-bold">+ Add Image URL</button>
-              </div>
-            </div>
-
-            <div className="bg-white p-4 md:p-6 rounded-2xl shadow-sm border-2 border-emerald-100">
-              <h2 className="text-lg font-bold text-gray-800 mb-4 flex items-center gap-2">
-                <MapPin size={20} className="text-emerald-600" /> Delivery Whitelist
-              </h2>
-
-              <label className="text-sm font-bold text-gray-600 block mb-2">Allowed Pincodes (Comma Separated)</label>
-              <input
-                type="text"
-                placeholder="e.g., 452001, 452002"
-                value={data.deliveryRules?.allowedPincodes?.join(', ') || ''}
-                onChange={e =>
-                  setData({
-                    ...data,
-                    deliveryRules: {
-                      ...data.deliveryRules,
-                      allowedPincodes: e.target.value.split(',').map((s: string) => s.trim())
-                    }
-                  })
-                }
-                className="w-full p-3 border rounded-xl font-mono text-emerald-800"
-              />
-            </div>
-
-            <button
-              onClick={handleSave}
-              disabled={loading}
-              className="w-full bg-emerald-800 text-white py-4 rounded-xl font-bold text-lg shadow-xl hover:bg-black transition-all flex justify-center items-center gap-2 md:hidden"
-            >
-              {loading ? <Loader2 className="animate-spin" /> : (<><Save /> Save All Changes</>)}
-            </button>
-          </div>
-        </div>
-      </main>
-    </div>
-  );
-};
-
-export default ProductPage;
+}

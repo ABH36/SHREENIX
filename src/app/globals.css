@@ -1,53 +1,79 @@
 @import "tailwindcss";
 
 :root {
-  --background: #F6F3EC;
-  --foreground: #102820;
-  --green: #1C6B4A;
-  --leaf: #5FA777;
-  --mint: #AEE4C2;
-  --gold: #D4AF37;
+  /* NEW COLOR SCHEME - Product Based */
+  --background: #ffffff;
+  --foreground: #0d1b2a;
+  --primary: #1a237e;      /* Logo Blue */
+  --secondary: #bbdefb;    /* Product Tube Blue */
+  --accent: #ff5722;       /* Orange from Logo */
+  --highlight: #ffb300;    /* Golden Yellow */
+  --herbal: #2e7d32;       /* Ayurvedic Green */
+  --neutral-light: #f8f9fa;
+  --neutral-dark: #212529;
+  
   --card: #ffffff;
-  --shadow: 0 25px 60px rgba(0,0,0,0.15);
+  --shadow: 0 25px 60px rgba(0,0,0,0.1);
   --radius: 28px;
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: "Poppins", sans-serif;
-  --font-serif: "Playfair Display", serif;
+  --color-primary: var(--primary);
+  --color-secondary: var(--secondary);
+  --color-accent: var(--accent);
+  --color-highlight: var(--highlight);
+  --color-herbal: var(--herbal);
+  
+  /* Fonts Setup */
+  --font-sans: "Inter", "Noto Sans Devanagari", sans-serif;
+  --font-serif: "Poppins", "Playfair Display", serif;
+  --font-hindi: "Noto Sans Devanagari", sans-serif;
+  --font-gujarati: "Noto Sans Gujarati", sans-serif;
+  
+  --radius-lg: 28px;
+  --radius-xl: 40px;
 }
 
 body {
   background-color: var(--background);
   color: var(--foreground);
-  font-family: "Poppins", Arial, Helvetica, sans-serif;
+  font-family: var(--font-sans);
   letter-spacing: .2px;
 }
 
-h1,h2,h3 {
-  font-family: "Playfair Display", serif;
+h1, h2, h3 {
+  font-family: var(--font-serif);
   letter-spacing: .6px;
 }
 
+/* New Buttons - Product Theme */
 button, .btn {
-  background: linear-gradient(135deg, #1C6B4A, #5FA777);
+  background: linear-gradient(135deg, var(--primary), #3949ab);
   color: #fff;
   border-radius: 40px;
   padding: 14px 36px;
-  box-shadow: 0 18px 45px rgba(0,0,0,.25);
+  box-shadow: 0 18px 45px rgba(26, 35, 126, 0.25);
   transition: .4s ease;
+  font-weight: 600;
 }
 
 button:hover, .btn:hover {
   transform: translateY(-3px) scale(1.01);
+  box-shadow: 0 25px 60px rgba(26, 35, 126, 0.35);
+}
+
+.ayurvedic-btn {
+  background: linear-gradient(135deg, var(--herbal), #43a047);
+  box-shadow: 0 18px 45px rgba(46, 125, 50, 0.25);
 }
 
 .card {
   background: var(--card);
   border-radius: var(--radius);
   box-shadow: var(--shadow);
+  border: 1px solid rgba(187, 222, 251, 0.3);
 }
 
 .section {
@@ -57,9 +83,30 @@ button:hover, .btn:hover {
 img {
   border-radius: 24px;
 }
-.nav-link{
-  @apply text-[#102820] font-semibold text-sm tracking-wide hover:text-[#1C6B4A] transition;
+
+.nav-link {
+  @apply text-[#0d1b2a] font-semibold text-sm tracking-wide hover:text-[#1a237e] transition;
 }
-.mobile-link{
-  @apply block px-4 py-3 rounded-xl bg-white/70 text-[#102820] font-semibold;
+
+.mobile-link {
+  @apply block px-4 py-3 rounded-xl bg-white/90 text-[#0d1b2a] font-semibold border border-[#bbdefb];
+}
+
+/* Product Badge Styling */
+.product-badge {
+  background: linear-gradient(135deg, var(--secondary), #90caf9);
+  color: var(--primary);
+  border: 2px solid var(--primary);
+}
+
+/* Language Toggle */
+.lang-hindi {
+  background-color: var(--primary);
+  color: white;
+}
+
+.lang-english {
+  background-color: white;
+  color: var(--primary);
+  border: 2px solid var(--primary);
 }
